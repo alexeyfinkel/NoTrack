@@ -45,6 +45,8 @@ Implementation:
 
 #include "DataFormats/Common/interface/AssociationMap.h"
 #include "DataFormats/EgammaReco/interface/SuperCluster.h"
+#include "DataFormats/CaloRecHit/interface/CaloCluster.h"
+#include "DataFormats/EcalRecHit/interface/EcalRecHitCollections.h"
 #include "DataFormats/RecoCandidate/interface/RecoEcalCandidate.h"
 
 #include "DataFormats/Math/interface/deltaR.h"
@@ -92,6 +94,7 @@ class MakeZEffTree : public edm::EDAnalyzer {
         ZEffTree *m_ze;
         edm::InputTag tnpProducer_;
         edm::InputTag photTag_;
+        edm::InputTag recHitCollectionEETag_;
         
         std::vector<edm::InputTag> passProbeCandTags_;
         double delRMatchingCut_, delPtRelMatchingCut_;
@@ -118,10 +121,11 @@ MakeZEffTree::MakeZEffTree(const edm::ParameterSet& iConfig) {
     m_ze = new ZEffTree(f,writable);
 
     tnpProducer_ = iConfig.getUntrackedParameter<edm::InputTag > ("TagProbeProducer");
-    photTag_ = iConfig.getParameter< edm::InputTag > ("photonTag");
+    //photTag_ = iConfig.getParameter< edm::InputTag > ("photonTag");
     std::vector< edm::InputTag > defaultPassProbeCandTags;
     passProbeCandTags_ = iConfig.getUntrackedParameter< std::vector<edm::InputTag> >("passProbeCandTags", defaultPassProbeCandTags);
     photTag_ = iConfig.getParameter< edm::InputTag > ("photonTag");
+    recHitCollectionEETag_ = iConfig.getParameter< edm::InputTag > ("recHitCollection_EE");
 
     delRMatchingCut_ = iConfig.getUntrackedParameter<double>("dRMatchCut", 0.2);
     delPtRelMatchingCut_ = iConfig.getUntrackedParameter<double>("dPtMatchCut", 15.0);
@@ -151,7 +155,7 @@ void MakeZEffTree::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
     
 
     //if (!iEvent.isRealData()) {
-    if (false) {
+    if (false) { //note: this block is effectively commented out!
         Handle<edm::HepMCProduct> HepMC;
         iEvent.getByLabel("generator",HepMC);
         const HepMC::GenEvent* genE=HepMC->GetEvent();
@@ -266,15 +270,15 @@ void MakeZEffTree::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
 				if(m_ze->reco.eta[0]<1.445)//barrel
 				{
 					theta = 2*atan( exp( 1.566 ) );
-	                phi = m_ze->reco.phi[0];
+					phi = m_ze->reco.phi[0];
 					m_ze->reco.ix[0] = (int)(3.154*tan(theta)*cos(phi)/0.03);
 					m_ze->reco.iy[0] = (int)(3.154*tan(theta)*sin(phi)/0.03);
 				}
 				else if (m_ze->reco.eta[0]>1.566)//tracked endcap
 				{
 					theta = 2*atan( exp( m_ze->reco.eta[0]) );
-	                phi = m_ze->reco.phi[0];
-	                m_ze->reco.ix[0] = (int)(3.154*tan(theta)*cos(phi)/0.03);
+					phi = m_ze->reco.phi[0];
+					m_ze->reco.ix[0] = (int)(3.154*tan(theta)*cos(phi)/0.03);
 					m_ze->reco.iy[0] = (int)(3.154*tan(theta)*sin(phi)/0.03);
 				}
                 
@@ -287,14 +291,22 @@ void MakeZEffTree::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
                     m_ze->reco.phistar = MakeZEffTree::getPhiStar( m_ze->reco.eta[1], m_ze->reco.phi[1], m_ze->reco.eta[0], m_ze->reco.phi[0]);
                 }
 
+				bool matchFound;
                 for (int itype = 0; itype < (int) passProbeCandTags_.size(); ++itype) {
+                	matchFound = false;
                     //std::cout << "Looping over the types" << std::endl;
                     // Passing Probe Candidates
                     edm::Handle<reco::CandidateView> passprobes;
-                    if (!iEvent.getByLabel(passProbeCandTags_[itype], passprobes)) {
+                    iEvent.getByLabel(passProbeCandTags_[itype], passprobes);
+                    //iEvent.getByLabel(passProbeCandTags_[itype], passprobes;
+                    /*if (!iEvent.getByLabel(passProbeCandTags_[itype], passprobes)) {
                         LogWarning("ZFromData") << "Could not extract tag cands with input tag " << passProbeCandTags_[itype];
                         std::cout << "DIDn't get the darn tag..... " << std::endl;
-                    }
+                    }*/
+                    
+                    edm::Handle<EcalRecHitCollection> recHitsEE;
+					iEvent.getByLabel( recHitCollectionEETag_, recHitsEE );
+					const EcalRecHitCollection* theEndcapEcalRecHits = recHitsEE.product() ;
                     
                     edm::Handle< reco::PhotonCollection > NTprobes;
                 	iEvent.getByLabel(photTag_, NTprobes);
@@ -310,9 +322,11 @@ void MakeZEffTree::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
 
 					    double dRval = deltaR(tEta, tPhi, pEta, pPhi);
 					    double dPtRel = 999.0;
+					    double hitSumEnergy = 0;
 					    if (tPt > 0.0) dPtRel = fabs(pPt - tPt) / tPt;
 					    if( dRval < delRMatchingCut_ && dPtRel < delPtRelMatchingCut_ )
 					    {
+					    	matchFound = true;
                     		m_ze->reco.Eiso[1] = pit->ecalRecHitSumEtConeDR03()/pit->p4().Pt();
                     		m_ze->reco.Hiso[1] = pit->hcalTowerSumEtConeDR03()/pit->p4().Pt();
                     		m_ze->reco.RNine[1] = pit->r9();
@@ -322,8 +336,41 @@ void MakeZEffTree::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
                     		EEDetId eeId(xtalId);
                     		m_ze->reco.ix[1] = eeId.ix();
                     		m_ze->reco.iy[1] = eeId.iy();
+                    		
+                    		std::vector<std::pair<DetId,float> > hafs = pit->superCluster()->hitsAndFractions();
+                    		std::vector<float> *fracs = new std::vector<float>;
+                    		std::vector<int> *vix = new std::vector<int>;
+                    		std::vector<int> *viy = new std::vector<int>;
+                    		for( std::vector<std::pair<DetId,float> >::const_iterator hafIt = hafs.begin(); hafIt != hafs.end(); hafIt++ )
+                    		{
+                    			EEDetId eeId(hafIt->first);
+                    			//std::cout<<"DetID is "<<eeId<<std::endl;
+                    			vix->push_back(eeId.ix());
+                    			viy->push_back(eeId.iy());
+                    			
+                    			EERecHitCollection::const_iterator itrechit = theEndcapEcalRecHits->find(eeId);
+						        if (itrechit==theEndcapEcalRecHits->end()) continue;
+						        fracs->push_back( itrechit->energy() );
+						        hitSumEnergy += itrechit->energy();
+                    			//m_ze->reco.hitsAndFractions->push_back(*hafIt);
+                    		}
+                    		//normalize hit energies to get energy fractions:
+                    		for(unsigned int hit=0;hit<fracs->size(); hit++ )
+                    		{
+                    			fracs->at(hit) /= hitSumEnergy;
+                    			//m_ze->hitEnergyFractions->push_back(*hitIt/hitSumEnergy);
+                    			//std::cout<<"Energy Fraction is "<<*hitIt/hitSumEnergy<<std::endl;
+                    		}
+                    		
+                    		*(m_ze->ixs) = *vix;
+                    		*(m_ze->iys) = *viy;
+                    		*(m_ze->hitEnergyFractions) = *fracs;
+                    		
+                    	    //break;
 					    }
+					    //std::cout<<"Next Photon!"<<std::endl;
                 	}
+                	//std::cout<<"Next iType!!!"<<std::endl;
 
                     ///int ppass = ProbePassProbeOverlap(vprobes[0].first,passprobes);
                     //std::cout << "doing the cuts themselves for " << passProbeCandTags_[itype] << std::endl;
@@ -343,6 +390,8 @@ void MakeZEffTree::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
                     // Did this tag cause a L1 and/or HLT trigger?
                     //bool l1Trigger = false;
                     //bool hltTrigger = false;
+                    
+                    //if(matchFound) break;
                 }
 
             }

@@ -16,7 +16,7 @@ process.load("Configuration.StandardSequences.MagneticField_cff")
 process.load('RecoJets.JetProducers.kt4PFJets_cfi') # For isolation calculation
 
 
-process.MessageLogger.cerr.FwkReport.reportEvery = 100
+process.MessageLogger.cerr.FwkReport.reportEvery = 1000
 
 
 process.GlobalTag.globaltag = 'FT_R_53_V18::All' #this is supposed to be for 2012 A-C
@@ -60,6 +60,7 @@ process.demo = cms.EDAnalyzer('MakeZEffTree',
     quiet = cms.untracked.bool(True),
     TagProbeProducer = cms.untracked.InputTag('tpMapWP80AndNTSuper'),
     photonTag        = cms.InputTag( "photons" ),
+    recHitCollection_EE = cms.InputTag("reducedEcalRecHitsEE"),
     #TagProbeProducer = cms.untracked.InputTag('tpMapTIDSingleTrigHFSC'), # No trigger matching
     #TagProbeProducer = cms.untracked.InputTag('tpMapTIDDoubleTrigHFTID'), # Trigger matching
     CutNames          = cms.untracked.vstring("Supercluster-Eta", "GsfTrack-EtaDet",  "Iso-Pt", "ElectronId-EtaDet", "HLT-EtaDet", "HFElectronId-EtaDet", "HFSuperCluster-Et","HFTightElectronId-EtaDet","EID95","ISO95","EID90","ISO90","EID85","ISO85","EID80","ISO80","EID70","ISO70","EID60","ISO60","HLT-GSF","ISO80Only","ISO80Conv","EID80Only","EID80Conv","WP95","WP90","WP85","WP80","NTLooseElectronId-EtaDet","NTTightElectronId-EtaDet","HFTID" ),
