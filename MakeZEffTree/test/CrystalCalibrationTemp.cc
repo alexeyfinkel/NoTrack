@@ -20,9 +20,11 @@
 #include "TColor.h"
 #include "TProfile.h"
 #include "TF1.h"
+#include "TLorentzVector.h"
 
 
 #include "../src/ZEffTree.h"
+
 
 int crystalCalibTemp()
 {
@@ -38,340 +40,463 @@ int crystalCalibTemp()
 	TLegend* l1 = new TLegend(0.65,0.7,0.9,0.9);
 	l1->SetFillColor(10);
 	
+	//iteration number (should be about 10-15)
+	const int nIterations = 15;
+	
 	//let's be fancy and use a map!
-	std::map< pair<int,int>, TH1D* > histMapP, histMapN, ratioMapP, ratioMapN;
-	char nameP[128], titleP[256],nameN[128], titleN[256],nameRN[128], titleRN[256], nameRP[128], titleRP[256];
-	for(int i=30;i<71;i++)
+	std::map< pair<int,int>, TH1D* > ratioMapP, ratioMapN, constMapN, constMapP, zMassMapN, zMassMapP; 
+	char title[256],name[128], filename[128];
+	//and some hists
+	std::vector<TH1D*> meansN, meansP, meansAll;
+	std::vector<TH1D*> widthsN, widthsP, widthsAll;
+	std::vector<TH1D*> calConstsN, calConstsP, calConstsAll;
+	std::vector<TH1D*> zMassN, zMassP, zMassAll;
+	
+	for(int i=25;i<76;i++)
 	{
-		for(int j=30;j<71;j++)
+		for(int j=25;j<76;j++)
 		{
-			if( (((i-50.5)*(i-50.5)+(j-50.5)*(j-50.5))  < 132.25) || (((i-50.5)*(i-50.5)+(j-50.5)*(j-50.5)) > 342.25) ) continue;
-			sprintf(nameP,"mZix%diy%dzP",i,j);
-			sprintf(titleP,"M_{ee}, NT+ i_{x} = %d, i_{y} = %d;M_{ee};Events/2GeV",i,j);
-			sprintf(nameN,"mZix%diy%dzN",i,j);
-			sprintf(titleN,"M_{ee}, NT- i_{x} = %d, i_{y} = %d;M_{ee};Events/2GeV",i,j);
-			sprintf(nameRP,"RatioIx%diy%dzP",i,j);
-			sprintf(titleRP,"E_{exp}/E_{obs}, NT+ i_{x} = %d, i_{y} = %d;E_{exp}/E_{obs};Events",i,j);
-			sprintf(nameRN,"RatioIx%diy%dzN",i,j);
-			sprintf(titleRN,"E_{exp}/E_{obs}, NT- i_{x} = %d, i_{y} = %d;E_{exp}/E_{obs};Events",i,j);
-			histMapP[std::make_pair(i,j)]= new TH1D(nameP,titleP,30,60,120);
-			histMapN[std::make_pair(i,j)]= new TH1D(nameN,titleN,30,60,120);
-			ratioMapP[std::make_pair(i,j)]= new TH1D(nameRP,titleRP,20,0.4,1.6);
-			ratioMapN[std::make_pair(i,j)]= new TH1D(nameRN,titleRN,20,0.4,1.6);
+			//if( (((i-50.5)*(i-50.5)+(j-50.5)*(j-50.5))  < 132.25) || (((i-50.5)*(i-50.5)+(j-50.5)*(j-50.5)) > 342.25) ) continue;
+			sprintf(name,"RatioIx%diy%dzP",i,j);
+			sprintf(title,"E_{exp}/E_{obs}, NT+ i_{x} = %d, i_{y} = %d;E_{exp}/E_{obs};Events",i,j);
+			ratioMapP[std::make_pair(i,j)]= new TH1D(name,title,12,0.4,1.6);
+			sprintf(name,"RatioIx%diy%dzN",i,j);
+			sprintf(title,"E_{exp}/E_{obs}, NT- i_{x} = %d, i_{y} = %d;E_{exp}/E_{obs};Events",i,j);			
+			ratioMapN[std::make_pair(i,j)]= new TH1D(name,title,12,0.4,1.6);
+			sprintf(name,"CalConstIx%diy%dzN",i,j);
+			sprintf(title,"Calib. Const, NT- i_{x} = %d, i_{y} = %d;Iteration;CalConst",i,j);	
+			constMapN[std::make_pair(i,j)]= new TH1D(name,title,nIterations,0,nIterations);  
+			sprintf(name,"CalConstIx%diy%dzP",i,j);
+			sprintf(title,"Calib. Const, NT+ i_{x} = %d, i_{y} = %d;Iteration;CalConst",i,j);	
+			constMapP[std::make_pair(i,j)]= new TH1D(name,title,nIterations,0,nIterations);	
+			sprintf(name,"zMassIx%diy%dzN",i,j);
+			sprintf(title,"M_{ee}, NT- i_{x} = %d, i_{y} = %d;M_{ee} (GeV);Events/2GeV",i,j);	
+			zMassMapN[std::make_pair(i,j)]= new TH1D(name,title,30,60,120);
+			sprintf(name,"zMassIx%diy%dzP",i,j);
+			sprintf(title,"M_{ee}, NT+ i_{x} = %d, i_{y} = %d;M_{ee} (GeV);Events/2GeV",i,j);	
+			zMassMapP[std::make_pair(i,j)]= new TH1D(name,title,30,60,120);
+			
+			//initialize consts	to zero, just in case (not actually used):
+			constMapN[std::make_pair(i,j)]->SetBinContent(0,1);
+			constMapP[std::make_pair(i,j)]->SetBinContent(0,1);
 		}
 	}
-	std::cout<<"Map made; proceeding to make ntuple."<<std::endl;
-		
-	//getting real ambitious now: gonna do eta rings!
-	std::vector<TH1D*> peakByEtaP, peakByEtaN, meanByEtaP, meanByEtaN;
-	char ringName[128], ringTitle[256];
-	for(int i=0;i<7;i++)
-	{
-		sprintf(ringName,"peaksEtaPRing%d",i+1);
-		sprintf(ringTitle,"Gauss-fit Peaks, NT+, Eta Ring #%d;GF Peak;Events",i+1);
-		peakByEtaP.push_back( new TH1D(ringName,ringTitle,30,60,120) );
-		sprintf(ringName,"peaksEtaNRing%d",i+1);
-		sprintf(ringTitle,"Gauss-fit Peaks, NT-, Eta Ring #%d;GF Peak;Events",i+1);
-		peakByEtaN.push_back( new TH1D(ringName,ringTitle,30,60,120) );
-		sprintf(ringName,"meansEtaPRing%d",i+1);
-		sprintf(ringTitle,"Mean Ratios, NT+, Eta Ring #%d;Mean Ratio;Events",i+1);
-		meanByEtaP.push_back( new TH1D(ringName,ringTitle,40,0,2) );
-		sprintf(ringName,"meansEtaNRing%d",i+1);
-		sprintf(ringTitle,"Mean Ratios, NT-, Eta Ring #%d;Mean Ratio;Events",i+1);
-		meanByEtaN.push_back( new TH1D(ringName,ringTitle,40,0,2) );		
-	}	
+	//std::cout<<"Maps made; proceeding to make ntuple."<<std::endl;
 	
+	//initialize hists
+	for( int i=1; i<=nIterations; i++ )
+	{
+		//mean ratios
+		sprintf(name,"meansP_%d",i);
+		sprintf(title,"E_{exp}/E_{obs}, NT+, %d Iterations;E_{exp}/E_{obs};Events",i);
+		meansP.push_back(new TH1D(name,title,40,0.8,1.2));
+		sprintf(name,"meansN_%d",i);
+		sprintf(title,"E_{exp}/E_{obs}, NT-, %d Iterations;E_{exp}/E_{obs};Events",i);
+		meansN.push_back(new TH1D(name,title,40,0.8,1.2));
+		sprintf(name,"meansAll_%d",i);
+		sprintf(title,"E_{exp}/E_{obs}, All NT, %d Iterations;E_{exp}/E_{obs};Events",i);
+		meansAll.push_back(new TH1D(name,title,40,0.8,1.2));
+		//widths or ratio distributions per xtl
+		sprintf(name,"widthsP_%d",i);
+		sprintf(title,"#sigma(E_{exp}/E_{obs}), NT+, %d Iterations;#sigma(E_{exp}/E_{obs});Events",i);
+		widthsP.push_back(new TH1D(name,title,20,0.08,0.18));
+		sprintf(name,"widthsN_%d",i);
+		sprintf(title,"#sigma(E_{exp}/E_{obs}), NT-, %d Iterations;#sigma(E_{exp}/E_{obs});Events",i);
+		widthsN.push_back(new TH1D(name,title,20,0.08,0.18));
+		sprintf(name,"widthsAll_%d",i);
+		sprintf(title,"#sigma(E_{exp}/E_{obs}), All NT, %d Iterations;#sigma(E_{exp}/E_{obs});Events",i);
+		widthsAll.push_back(new TH1D(name,title,20,0.08,0.18));
+		//calib. const. distributions
+		sprintf(name,"calConstsP_%d",i);
+		sprintf(title,"Cal. Consts, NT+, %d Iterations;CalConst;Events",i);
+		calConstsP.push_back(new TH1D(name,title,24,0.4,1.6));
+		sprintf(name,"calConstsN_%d",i);
+		sprintf(title,"Cal. Consts, NT-, %d Iterations;CalConst;Events",i);
+		calConstsN.push_back(new TH1D(name,title,24,0.4,1.6));
+		sprintf(name,"calConstsAll_%d",i);
+		sprintf(title,"Cal. Consts, All NT, %d Iterations;CalConst;Events",i);
+		calConstsAll.push_back(new TH1D(name,title,24,0.4,1.6));
+		//Z mass hists
+		sprintf(name,"zMassN_%d",i);
+		sprintf(title,"M_{ee}, NT-, %d Iterations;M_{ee} (GeV);Events",i);
+		zMassN.push_back(new TH1D(name,title,30,60,120));
+		sprintf(name,"zMassP_%d",i);
+		sprintf(title,"M_{ee}, NT+, %d Iterations;M_{ee} (GeV);Events",i);
+		zMassP.push_back(new TH1D(name,title,30,60,120));
+		sprintf(name,"zMassAll_%d",i);
+		sprintf(title,"M_{ee}, All NT, %d Iterations;M_{ee} (GeV);Events",i);
+		zMassAll.push_back(new TH1D(name,title,30,60,120));
+	}
+	//2-D hists for final Mean Ratios, Z masses before and after:
+	TH2D *meansMapBeforeN = new TH2D("meansMapBeforeN","Mean Before, NT-;i_{x};i_{y}",40,30,70,40,30,70);
+	TH2D *meansMapBeforeP = new TH2D("meansMapBeforeP","Mean Before, NT+;i_{x};i_{y}",40,30,70,40,30,70);
+	TH2D *meansMapAfterN = new TH2D("meansMapAfterN","Mean After, NT-;i_{x};i_{y}",40,30,70,40,30,70);
+	TH2D *meansMapAfterP = new TH2D("meansMapAfterP","Mean After, NT+;i_{x};i_{y}",40,30,70,40,30,70);
+	TH2D *zMassBeforeN = new TH2D("zMassBeforeN","Z Mass Before Calibration, NT-;i_{x};i_{y}",40,30,70,40,30,70);
+	TH2D *zMassBeforeP = new TH2D("zMassBeforeP","Z Mass Before Calibration, NT+;i_{x};i_{y}",40,30,70,40,30,70);
+	TH2D *zMassAfterN = new TH2D("zMassAfterN","Z Mass After Calibration, NT-;i_{x};i_{y}",40,30,70,40,30,70);
+	TH2D *zMassAfterP = new TH2D("zMassAfterP","Z Mass After Calibration, NT+;i_{x};i_{y}",40,30,70,40,30,70);
+	TH2D *finalCalConstsN = new TH2D("finalCalConstsN","Final Calibration Constants, NT-;i_{x};i_{y}",40,30,70,40,30,70);
+	TH2D *finalCalConstsP = new TH2D("finalCalConstsp","Final Calibration Constants, NT+;i_{x};i_{y}",40,30,70,40,30,70);
+	
+	
+		
 	//file to store calibration constants
 	ofstream calFile;
-	calFile.open("CalConstsMeanRatioData.txt",ios::trunc);
+	calFile.open("Calibration/CalConsts_Data.txt",ios::trunc);
 	if(!calFile.is_open())
 	{
 		std::cout<<"Failed to create cal. constants file. Existing"<<std::endl;
 		return 1;
 	}
-	//st precision
 	calFile<<std::setprecision(7)<<std::fixed;
 			
 	//grab a data ntuple
-	TFile* f2 = new TFile("/afs/cern.ch/user/a/afinkel/public/NoTrack/CMSSW_5_3_8_patch3/src/NoTrack/MakeZeffTree/test_newCuts.root");	
+	TFile* f2 = new TFile("/local/cms/user/finkel/NoTrack/Ntuple/DE_ReReco_2012Full_WithClusters_001.root");	
 	if(f2 == NULL)
 	{
 		std::cout<<"Failed to open Data file. Exiting."<<std::endl;
 		return 1;
 	}
 	
-	//make data ntuple:
-	ZEffTree* ze2 = new ZEffTree(*f2,false);
-	//Fill the data histograms:
-	int ix,iy;
-	const double Mz = 91.1876; //nominal Z mass
-	double expectedPt;
-	for(int event=0; event<ze2->Entries(); event++ ) //fill the data hists
+	
+	//-------------------------------------------------start iterationloop here
+	
+	for( int iter=1; iter<=nIterations; iter++ )
 	{
-		ix=ze2->reco.ix[1];
-		iy=ze2->reco.iy[1];
-		if( (fabs(ze2->reco.eta[1])>2.5) && (fabs(ze2->reco.eta[1])<3.0) 
-			 &&(ix>29) &&(ix<71) &&(iy>29) &&(iy<71)
-			 && ze2->reco.isSelected(1,"NTLooseElectronId-EtaDet") //using only events that pass selection now!
-		  ) 
+		//make data ntuple:
+		ZEffTree* ze2 = new ZEffTree(*f2,false);
+		//Fill the data histograms:
+		int ix,iy;
+		int hix, hiy;
+		const double Mz = 91.1876; //nominal Z mass
+		double expectedPt;
+		double observedPt;
+		double correction;
+		
+		TLorentzVector elec1, elec2, theZ;
+		float pt, eta, phi, E;
+		
+		for(int event=0; event<ze2->Entries(); event++ ) //fill the data hists
 		{
-				std::cout<<"Ping!"<<std::endl;	
-			if( (((ix-50.5)*(ix-50.5)+(iy-50.5)*(iy-50.5))  < 132.25) || (((ix-50.5)*(ix-50.5)+(iy-50.5)*(iy-50.5)) > 342.25) )
-			{
-				ze2->GetNextEvent();
-				continue;
-			}
-			
-			//"expected energy
-			expectedPt = Mz*Mz / ( 2*ze2->reco.pt[1]*( cosh(ze2->reco.eta[1]-ze2->reco.eta[0]) - cos(ze2->reco.phi[1]-ze2->reco.phi[0]) ) );
-			//NOTE: this is the energy of the entire CLUSTER, not just SEED!
-			//Though most of it still comes from the seed crystal... so good enough for now.
-			
-			if(ze2->reco.eta[1]>0)//positive endcap
-			{
-				histMapP[std::make_pair(ix,iy)]->Fill(ze2->reco.mz);
-				if( (ze2->reco.mz>75) && (ze2->reco.mz<105) )
+			ix=ze2->reco.ix[1];//seed ix
+			iy=ze2->reco.iy[1];//seed iy
+			if( (fabs(ze2->reco.eta[1])>2.5) && (fabs(ze2->reco.eta[1])<3.0) 
+				 &&(ix>29) &&(ix<71) &&(iy>29) &&(iy<71)
+				 && ze2->reco.isSelected(1,"NTLooseElectronId-EtaDet") //using only events that pass selection now!
+			  ) 
+			{	
+				if( (((ix-50.5)*(ix-50.5)+(iy-50.5)*(iy-50.5))  < 132.25) || (((ix-50.5)*(ix-50.5)+(iy-50.5)*(iy-50.5)) > 342.25) )
 				{
-					std::cout<<"\n\nNEXT HIT ("<<ze2->ixs->size()<<" xtl hits):"<<std::endl;
-					for(unsigned int k=0; k<(ze2->ixs->size()); k++ )
-					{
-						
-						std::cout<<"Xtal ("<<(ze2->ixs->at(k))<<","<<(ze2->iys->at(k))<<"), fraction = "<<(ze2->hitEnergyFractions->at(k))<<std::endl;
-						//ratioMapP[std::make_pair(hitIx,hitIy)]->Fill(expectedPt/ze2->reco.pt[1],ze2->hitEnergyFractions);  //NOTE: Using Expected/Observed!
-					}
+					ze2->GetNextEvent();
+					continue;
 				}
-			}
-			else//negative endcap
-			{
-				histMapN[std::make_pair(ix,iy)]->Fill(ze2->reco.mz);
-				if( (ze2->reco.mz>75) && (ze2->reco.mz<105) )
-				{
-					std::cout<<"\n\nNEXT HIT ("<<ze2->ixs->size()<<" xtl hits):"<<std::endl;
-					for(unsigned int k=0; k<(ze2->ixs->size()); k++ )
-					{
-						
-						std::cout<<"Xtal ("<<(ze2->ixs->at(k))<<","<<(ze2->iys->at(k))<<"), fraction = "<<(ze2->hitEnergyFractions->at(k))<<std::endl;
-						//ratioMapN[std::make_pair(hitIx,hitIy)]->Fill(expectedPt/ze2->reco.pt[1],ze2->hitEnergyFractions);  //NOTE: Using Expected/Observed!
-					}
-				}
-			}
-		}
-		ze2->GetNextEvent();
-	}
 
-	std::cout<<"Hists filled. Proceeding to makeing plots."<<std::endl;
-	//gonna try fitting now!
-	/*TF1 *ratioFit = new TF1("fit","gaus",0.4,1.6);
-	TF1 *massFit = new TF1("fit","gaus",60,120);
-	
-	//hists to contain the means and the peaks:
-	TH1D *allMeans = new TH1D("allMeans","Distribution of Means, all NT;mean",40,0,2);
-	TH1D *meansN = new TH1D("meansN","Distribution of Means, NT-;mean",40,0,2);
-	TH1D *meansP = new TH1D("meansP","Distribution of Means, NT+;mean",40,0,2);
-	TH2D *meansMapN = new TH2D("meansMapN","Mean, NT-;i_{x};i_{y}",40,30,70,40,30,70);
-	TH2D *meansMapP = new TH2D("meansMapP","Mean, NT+;i_{x};i_{y}",40,30,70,40,30,70);
-	TH2D *peaksMapN = new TH2D("peaksMapN","Gauss-fit Z peak, NT-;i_{x};i_{y}",40,30,70,40,30,70);
-	TH2D *peaksMapP = new TH2D("peaksMapP","Gauss-fit Z peak, NT+;i_{x};i_{y}",40,30,70,40,30,70);
-	TH1D *ringAveragePeakN = new TH1D("ringAveragePeaksN","Ring-averaged GF Peaks, NT-;#eta-ring;GF Peak",8,0,8);
-	TH1D *ringAveragePeakP = new TH1D("ringAveragePeaksP","Ring-averaged GF Peaks, NT+;#eta-ring;GF Peak",8,0,8);
-	TH1D *ringAverageMeanN = new TH1D("ringAverageMeansN","Ring-averaged Mean Ratios, NT-;#eta-ring;<E_{exp}/E_{obs}>",8,0,8);
-	TH1D *ringAverageMeanP = new TH1D("ringAverageMeansP","Ring-averaged Mean Ratios, NT+;#eta-ring;<E_{exp}/E_{obs}>",8,0,8);
-	
-	//std::cout<<"Ping!"<<std::endl;
-	
-	//char filename[128];//,legend1[256],legend2[256];
-	int massCount=0;
-	int ratioCount=0;
-	int ring;
-	for(int i=30;i<71;i++)
-	{
-		for(int j=30;j<71;j++)
-		{
-			//if (massCount >= 10) break;
-			if( (((i-50.5)*(i-50.5)+(j-50.5)*(j-50.5))  < 132.25) || (((i-50.5)*(i-50.5)+(j-50.5)*(j-50.5)) > 342.25) ) continue;
-			
-			ring = (int)(sqrt( (i-50.5)*(i-50.5)+(j-50.5)*(j-50.5) )-11.5);
-			
-			if( ring<0 || ring>7)
-			{
-				std::cout<<"Invalid Ring number: ring "<<ring<<std::endl;
-			}
-			
-			if( histMapP[std::make_pair(i,j)]->Integral() > 50 )
-			{				
-				histMapP[std::make_pair(i,j)]->Fit(massFit,"QLMN","",80,110);
+				//compute the correction factor for observed energy
+				if(iter==1) correction = 1;
+				correction=0;
+                for(unsigned int k=0; k<(ze2->ixs->size()); k++ )
+                {	
+                    hix = ze2->ixs->at(k);
+                    hiy = ze2->iys->at(k);
+                    if(ze2->reco.eta[1]>0) correction+=(constMapP[std::make_pair(hix,hiy)]->GetBinContent(iter-1))*(ze2->hitEnergyFractions->at(k));//positive endcap 
+                    else correction+=(constMapN[std::make_pair(hix,hiy)]->GetBinContent(iter-1))*(ze2->hitEnergyFractions->at(k));//negative endcap
+                }
+				//recalculate observed Pt using correction:
+				observedPt = ze2->reco.pt[1]*correction;
 				
-				peaksMapP->SetBinContent(i-30,j-30,massFit->GetParameter(1));
-				peakByEtaP[ring]->Fill(massFit->GetParameter(1));
-				massCount++;
+				//recalculate Z mass using found correction
+				pt = ze2->reco.pt[0];    	//tracked electron
+				eta = ze2->reco.eta[0];
+				phi = ze2->reco.phi[0];
+				E = pt*cosh(eta);
+				elec1.SetPtEtaPhiE(pt,eta,phi,E);				
+				pt = ze2->reco.pt[1]; 		//now untracked
+				pt *= correction;	
+				eta = ze2->reco.eta[1];
+				phi = ze2->reco.phi[1];    
+				E = pt*cosh(eta);	
+				elec2.SetPtEtaPhiE(pt,eta,phi,E);
+				theZ = elec1+elec2;		//new Z vector
+				zMassAll[iter-1]->Fill(theZ.M());
+				
+				//"expected energy
+				expectedPt = Mz*Mz / ( 2*ze2->reco.pt[0]*( cosh(ze2->reco.eta[1]-ze2->reco.eta[0]) - cos(ze2->reco.phi[1]-ze2->reco.phi[0]) ) );
+				//NOTE: this is the energy of the entire CLUSTER, not just SEED!
+				//Though most of it still comes from the seed crystal... so good enough for now.				
+				
+				//std::cout<<"ExpectedPt = "<<expectedPt<<"; ObservedPt = "<<observedPt<<std::endl;
+				if(ze2->reco.eta[1]>0)//positive endcap
+				{				
+					//histMapP[std::make_pair(ix,iy)]->Fill(ze2->reco.mz);
+					if( (ze2->reco.mz>80) && (ze2->reco.mz<110) )
+					{
+						zMassP[iter-1]->Fill(theZ.M());
+						zMassMapP[std::make_pair(ix,iy)]->Fill(theZ.M());
+						//std::cout<<"\n\nNEXT HIT ("<<ze2->ixs->size()<<" xtl hits):"<<std::endl;
+						for(unsigned int k=0; k<(ze2->ixs->size()); k++ )
+						{
+							hix = ze2->ixs->at(k);
+							hiy = ze2->iys->at(k);
+							if((hix<25)||(hix>75)||(hiy<25)||(hiy>75))
+							{
+								std::cout<<"Out of bounds: ("<<hix<<","<<hiy<<") Z+; frac = "<<ze2->hitEnergyFractions->at(k)<<std::endl;
+								continue;
+							}
+							//std::cout<<"Xtal ("<<(ze2->ixs->at(k))<<","<<(ze2->iys->at(k))<<") Z+, fraction = "<<(ze2->hitEnergyFractions->at(k))<<std::endl;
+							ratioMapP[std::make_pair(hix,hiy)]->Fill(expectedPt/observedPt,ze2->hitEnergyFractions->at(k));  //NOTE: Using Expected/Observed!
+							
+						}
+					}
+				}
+				else//negative endcap
+				{
+					//histMapN[std::make_pair(ix,iy)]->Fill(ze2->reco.mz);
+					if( (ze2->reco.mz>80) && (ze2->reco.mz<110) )
+					{
+						zMassN[iter-1]->Fill(theZ.M());
+						zMassMapN[std::make_pair(ix,iy)]->Fill(theZ.M());
+						//std::cout<<"\n\nNEXT HIT ("<<ze2->ixs->size()<<" xtl hits):"<<std::endl;
+						for(unsigned int k=0; k<(ze2->ixs->size()); k++ )
+						{
+							hix = ze2->ixs->at(k);
+							hiy = ze2->iys->at(k);
+							if((hix<25)||(hix>75)||(hiy<25)||(hiy>75))
+							{
+								std::cout<<"Out of bounds: ("<<hix<<","<<hiy<<") Z-; frac = "<<ze2->hitEnergyFractions->at(k)<<std::endl;
+								continue;
+							}
+							//if(ze2->hitEnergyFractions->at(k)<0) continue;
+							//std::cout<<"Xtal ("<<(ze2->ixs->at(k))<<","<<(ze2->iys->at(k))<<") Z-, fraction = "<<(ze2->hitEnergyFractions->at(k))<<std::endl;
+							ratioMapN[std::make_pair(hix,hiy)]->Fill(expectedPt/observedPt,ze2->hitEnergyFractions->at(k));  //NOTE: Using Expected/Observed!
+						}
+					}
+				}
 			}
-			if( histMapN[std::make_pair(i,j)]->Integral() > 50 )
+			ze2->GetNextEvent();
+		}//end loop over events in ntuple
+		
+		//compute next set of constants
+		TF1 *ratioFit = new TF1("fit","gaus",0.4,1.6);
+		TF1 *massFit = new TF1("fit","gaus",70,110);
+		
+        //do ratio and Z-peak fitting and fill 2-D hists:
+        
+		for(int i=30;i<71;i++)
+		{
+			for(int j=30;j<71;j++)
 			{
-				histMapN[std::make_pair(i,j)]->Fit(massFit,"QLMN","",80,110);
-				peaksMapN->SetBinContent(i-30,j-30,massFit->GetParameter(1));
-				peakByEtaN[ring]->Fill(massFit->GetParameter(1));
-				massCount++;
-			} 
-			if( ratioMapP[std::make_pair(i,j)]->Integral() > 50 )
-			{
-				ratioMapP[std::make_pair(i,j)]->Fit(ratioFit,"QLMN","",0.4,1.6);
-				allMeans->Fill(ratioFit->GetParameter(1));
-				meansP->Fill(ratioFit->GetParameter(1));
-				meansMapP->SetBinContent(i-30,j-30,ratioFit->GetParameter(1));
-				meanByEtaP[ring]->Fill(ratioFit->GetParameter(1));
-				calFile<<i<<"\t"<<j<<"\t1\t"<<(float)ratioFit->GetParameter(1)<<"\t"<<(float)ratioFit->GetParError(1)<<"\n";
-				ratioCount++;				
-			}
-			else
-			{
-				calFile<<i<<"\t"<<j<<"\t1\t-1\t999\n";
-			}
-			if( ratioMapN[std::make_pair(i,j)]->Integral() > 50 )
-			{
-				ratioMapN[std::make_pair(i,j)]->Fit(ratioFit,"QLMN","",0.4,1.6);
-				allMeans->Fill(ratioFit->GetParameter(1));
-				meansN->Fill(ratioFit->GetParameter(1));
-				meansMapN->SetBinContent(i-30,j-30,ratioFit->GetParameter(1));	
-				meanByEtaN[ring]->Fill(ratioFit->GetParameter(1));
-				calFile<<i<<"\t"<<j<<"\t-1\t"<<(float)ratioFit->GetParameter(1)<<"\t"<<(float)ratioFit->GetParError(1)<<"\n";
-				ratioCount++;
-			}
-			else
-			{
-				calFile<<i<<"\t"<<j<<"\t-1\t-1\t999\n";
+				if( (((i-50.5)*(i-50.5)+(j-50.5)*(j-50.5))  < 132.25)  || (((i-50.5)*(i-50.5)+(j-50.5)*(j-50.5)) > 342.25) ) continue;
+				
+				//do ratio fits and hists
+                //negative side
+				if(ratioMapN[std::make_pair(i,j)]->GetEntries() > 30)
+				{
+					ratioMapN[std::make_pair(i,j)]->Fit(ratioFit,"QLMN","",0.4,1.6);					
+					constMapN[std::make_pair(i,j)]->SetBinContent(iter,(constMapN[std::make_pair(i,j)]->GetBinContent(iter-1) )*(ratioFit->GetParameter(1) ) );
+					//constMapN[std::make_pair(i,j)]->SetBinError(iter, ratioFit->GetParError(1));
+					calConstsN[iter-1]->Fill( constMapN[std::make_pair(i,j)]->GetBinContent(iter) );
+					calConstsAll[iter-1]->Fill( constMapN[std::make_pair(i,j)]->GetBinContent(iter) );
+					meansN[iter-1]->Fill( ratioFit->GetParameter(1) );
+					meansAll[iter-1]->Fill( ratioFit->GetParameter(1) );
+					if(iter==1) 
+                    {
+                        meansMapBeforeN->SetBinContent(i-30,j-30,ratioFit->GetParameter(1));
+                        zMassMapN[std::make_pair(i,j)]->Fit(massFit,"QLMN","",80,110);
+                        zMassBeforeN->SetBinContent(i-30,j-30,massFit->GetParameter(1));
+                    }
+					if(iter==nIterations) 
+					{
+						meansMapAfterN->SetBinContent(i-30,j-30,ratioFit->GetParameter(1) );
+						finalCalConstsN->SetBinContent(i-30,j-30,constMapN[std::make_pair(i,j)]->GetBinContent(iter) );
+                        zMassMapN[std::make_pair(i,j)]->Fit(massFit,"QLMN","",75,105);
+                        zMassAfterN->SetBinContent(i-30,j-30,massFit->GetParameter(1));
+                        calFile<<i<<"\t"<<j<<"\t-1\t"<<(float)(constMapN[std::make_pair(i,j)]->GetBinContent(iter))<<"\t"<<(float)ratioFit->GetParError(1)<<"\n";
+					}
+				
+					widthsN[iter-1]->Fill(ratioFit->GetParameter(2));
+					widthsAll[iter-1]->Fill(ratioFit->GetParameter(2));
+				}
+				//sample xtl
+				if(i==48 && j==38) std::cout<<"Mean = "<<ratioFit->GetParameter(1)<<", width = "<<ratioFit->GetParameter(2)<<std::endl;
+				
+                //now positive side
+				if(ratioMapP[std::make_pair(i,j)]->GetEntries() > 30)
+				{
+					ratioMapP[std::make_pair(i,j)]->Fit(ratioFit,"QLMN","",0.4,1.6);					
+					constMapP[std::make_pair(i,j)]->SetBinContent(iter, (constMapP[std::make_pair(i,j)]->GetBinContent(iter-1) )*(ratioFit->GetParameter(1) ));
+					//constMapP[std::make_pair(i,j)]->SetBinError(iter, ratioFit->GetParError(1));
+					calConstsP[iter-1]->Fill( constMapP[std::make_pair(i,j)]->GetBinContent(iter) );
+					calConstsAll[iter-1]->Fill( constMapP[std::make_pair(i,j)]->GetBinContent(iter) );	
+					meansP[iter-1]->Fill( ratioFit->GetParameter(1) );
+					meansAll[iter-1]->Fill( ratioFit->GetParameter(1) );			
+					if(iter==1) 
+                    {
+                        meansMapBeforeP->SetBinContent(i-30,j-30,ratioFit->GetParameter(1));
+                        zMassMapP[std::make_pair(i,j)]->Fit(massFit,"QLMN","",80,110);
+                        zMassBeforeP->SetBinContent(i-30,j-30,massFit->GetParameter(1));
+                        
+                    }
+					if(iter==nIterations) 
+					{
+						meansMapAfterP->SetBinContent(i-30,j-30,ratioFit->GetParameter(1) );
+						finalCalConstsP->SetBinContent(i-30,j-30,constMapP[std::make_pair(i,j)]->GetBinContent(iter) );
+                        zMassMapP[std::make_pair(i,j)]->Fit(massFit,"QLMN","",75,105);
+                        zMassAfterP->SetBinContent(i-30,j-30,massFit->GetParameter(1));
+                        calFile<<i<<"\t"<<j<<"\t1\t"<<(float)(constMapP[std::make_pair(i,j)]->GetBinContent(iter))<<"\t"<<(float)ratioFit->GetParError(1)<<"\n";
+                        
+					}
+				
+					widthsP[iter-1]->Fill(ratioFit->GetParameter(2));
+					widthsAll[iter-1]->Fill(ratioFit->GetParameter(2));
+				}
+				if(iter != nIterations)
+				{
+					ratioMapN[std::make_pair(i,j)]->Reset();
+					ratioMapP[std::make_pair(i,j)]->Reset();
+					zMassMapN[std::make_pair(i,j)]->Reset();
+					zMassMapP[std::make_pair(i,j)]->Reset();
+				}
 			}
 		}
-	}
-	calFile.close();
-	std::cout<<"Looped thought all the crystals."<<std::endl;
-	
-	//draw histograms:
-	allMeans->SetMarkerStyle(20);
-	allMeans->Draw("E");
-	c1->Print("Efficiencies/CrystalCalibData/allMeans.png");
-	c1->Clear();
-	meansP->SetMarkerStyle(20);
-	meansP->Draw("E");
-	c1->Print("Efficiencies/CrystalCalibData/MeansP.png");
-	c1->Clear();
-	meansN->SetMarkerStyle(20);
-	meansN->Draw("E");
-	c1->Print("Efficiencies/CrystalCalibData/MeansN.png");
-	c1->Clear();
-	meansMapP->GetZaxis()->SetRangeUser(0.6,1.4);
-	meansMapP->GetZaxis()->SetLabelSize(0.03);
-	meansMapP->Draw("colz");
-	c1->Print("Efficiencies/CrystalCalibData/MeansMapP.png");
-	c1->Clear();
-	meansMapN->GetZaxis()->SetRangeUser(0.6,1.4);
-	meansMapN->GetZaxis()->SetLabelSize(0.03);
-	meansMapN->Draw("colz");
-	c1->Print("Efficiencies/CrystalCalibData/MeansMapN.png");
-	c1->Clear();
-	peaksMapP->GetZaxis()->SetRangeUser(80,105);
-	peaksMapP->GetZaxis()->SetLabelSize(0.03);
-	peaksMapP->Draw("colz");
-	c1->Print("Efficiencies/CrystalCalibData/MassPeaksMapP.png");
-	c1->Clear();
-	peaksMapN->GetZaxis()->SetRangeUser(80,105);
-	peaksMapN->GetZaxis()->SetLabelSize(0.03);
-	peaksMapN->Draw("colz");
-	c1->Print("Efficiencies/CrystalCalibData/MassPeaksMapN.png");
-	c1->Clear();	
-	
-	for(int i=0;i<7;i++)
-	{
-		sprintf(filename,"Efficiencies/CrystalCalibData/MassPeakPEtaRing%d.png",i);
-		peakByEtaP[i]->SetMarkerStyle(20);
-		peakByEtaP[i]->SetMarkerColor(kBlue+2);
-		peakByEtaP[i]->Draw("E");
-		//peakByEtaP[i]->Fit(massFit,"Q","",80,100);
-		//ringAveragePeakP->SetBinContent(i+1,massFit->GetParameter(1));
-		//ringAveragePeakP->SetBinError(i+1,massFit->GetParError(1));
-		ringAveragePeakP->SetBinContent(i+1,peakByEtaP[i]->GetMean(1));
-		ringAveragePeakP->SetBinError(i+1,peakByEtaP[i]->GetMeanError(1));
+		
+		//draw ratio distributions:
+		sprintf(filename,"Calibration/MeansByIter/MeansN_after%d.png",iter);
+		meansN[iter-1]->SetMarkerStyle(20);
+		meansN[iter-1]->Draw("P");
 		c1->Print(filename);
 		c1->Clear();
-		sprintf(filename,"Efficiencies/CrystalCalibData/MassPeakNEtaRing%dN.png",i);
-		peakByEtaN[i]->SetMarkerStyle(20);
-		peakByEtaN[i]->SetMarkerColor(kBlue+2);
-		peakByEtaN[i]->Draw("E");
-		//peakByEtaN[i]->Fit(massFit,"Q","",80,100);
-		//ringAveragePeakN->SetBinContent(i+1,massFit->GetParameter(1));
-		//ringAveragePeakN->SetBinError(i+1,massFit->GetParError(1));
-		ringAveragePeakN->SetBinContent(i+1,peakByEtaN[i]->GetMean(1));
-		ringAveragePeakN->SetBinError(i+1,peakByEtaN[i]->GetMeanError(1));
+		sprintf(filename,"Calibration/MeansByIter/MeansP_after%d.png",iter);
+		meansP[iter-1]->SetMarkerStyle(20);
+		meansP[iter-1]->Draw("P");
 		c1->Print(filename);
 		c1->Clear();
-		sprintf(filename,"Efficiencies/CrystalCalibData/MeanPEtaRing%d.png",i);
-		meanByEtaP[i]->SetMarkerStyle(20);
-		meanByEtaP[i]->SetMarkerColor(kBlue+2);
-		meanByEtaP[i]->Draw("E");
-		//meanByEtaP[i]->Fit(ratioFit,"Q","",0.4,1.6);
-		//ringAverageMeanP->SetBinContent(i+1,ratioFit->GetParameter(1));
-		//ringAverageMeanP->SetBinError(i+1,ratioFit->GetParError(1));
-		ringAverageMeanP->SetBinContent(i+1,meanByEtaP[i]->GetMean(1));
-		ringAverageMeanP->SetBinError(i+1,meanByEtaP[i]->GetMeanError(1));
+		sprintf(filename,"Calibration/MeansByIter/MeansAll_after%d.png",iter);
+		meansAll[iter-1]->SetMarkerStyle(20);
+		meansAll[iter-1]->Draw("P");
 		c1->Print(filename);
 		c1->Clear();
-		sprintf(filename,"Efficiencies/CrystalCalibData/MeanNEtaRing%dN.png",i);
-		meanByEtaN[i]->SetMarkerStyle(20);
-		meanByEtaN[i]->SetMarkerColor(kBlue+2);
-		meanByEtaN[i]->Draw("E");
-		//meanByEtaN[i]->Fit(ratioFit,"Q","",0.4,1.6);
-		//ringAverageMeanN->SetBinContent(i+1,ratioFit->GetParameter(1));
-		//ringAverageMeanN->SetBinError(i+1,ratioFit->GetParError(1));
-		ringAverageMeanN->SetBinContent(i+1,meanByEtaN[i]->GetMean(1));
-		ringAverageMeanN->SetBinError(i+1,meanByEtaN[i]->GetMeanError(1));
+		//draw cal. consts distributions
+		sprintf(filename,"Calibration/CalConstsByIter/CalConstsN_after%d.png",iter);
+		calConstsN[iter-1]->SetMarkerStyle(20);
+		calConstsN[iter-1]->Draw("P");
 		c1->Print(filename);
 		c1->Clear();
+		sprintf(filename,"Calibration/CalConstsByIter/CalConstsP_after%d.png",iter);
+		calConstsP[iter-1]->SetMarkerStyle(20);
+		calConstsP[iter-1]->Draw("P");
+		c1->Print(filename);
+		c1->Clear();
+		sprintf(filename,"Calibration/CalConstsByIter/CalConstsAll_after%d.png",iter);
+		calConstsAll[iter-1]->SetMarkerStyle(20);
+		calConstsAll[iter-1]->Draw("P");
+		c1->Print(filename);
+		c1->Clear();
+		//draw widths distributions
+		sprintf(filename,"Calibration/WidthsByIter/WidthsN_after%d.png",iter);
+		widthsN[iter-1]->SetMarkerStyle(20);
+		widthsN[iter-1]->Draw("P");
+		c1->Print(filename);
+		c1->Clear();
+		sprintf(filename,"Calibration/WidthsByIter/WidthsP_after%d.png",iter);
+		widthsP[iter-1]->SetMarkerStyle(20);
+		widthsP[iter-1]->Draw("P");
+		c1->Print(filename);
+		c1->Clear();
+		sprintf(filename,"Calibration/WidthsByIter/WidthsAll_after%d.png",iter);
+		widthsAll[iter-1]->SetMarkerStyle(20);
+		widthsAll[iter-1]->Draw("P");
+		c1->Print(filename);
+		c1->Clear();
+		//draw Z mass plots
+		sprintf(filename,"Calibration/ZMassByIter/ZMassN_after%d.png",iter);
+		zMassN[iter-1]->SetMarkerStyle(20);
+		zMassN[iter-1]->Draw("P");
+		c1->Print(filename);
+		c1->Clear();
+		sprintf(filename,"Calibration/ZMassByIter/ZMassP_after%d.png",iter);
+		zMassP[iter-1]->SetMarkerStyle(20);
+		zMassP[iter-1]->Draw("P");
+		c1->Print(filename);
+		c1->Clear();
+		sprintf(filename,"Calibration/MassByIter/ZMassAll_after%d.png",iter);
+		zMassAll[iter-1]->SetMarkerStyle(20);
+		zMassAll[iter-1]->Draw("P");
+		c1->Print(filename);
+		c1->Clear();
+		
+		//delete the ntuple:
+		delete[] ze2;
+		std::cout<<iter<<" iterations complete!"<<std::endl;
 	}
 	
-	ringAveragePeakP->SetMarkerStyle(20);
-	ringAveragePeakP->SetMarkerSize(2);
-	ringAveragePeakP->SetMarkerColor(kBlue+1);
-	ringAveragePeakP->GetYaxis()->SetRangeUser(85,100);
-	ringAveragePeakP->Draw("E");
-	c1->Print("Efficiencies/CrystalCalibData/AveragePeakVsEtaRingP.png");
+	//----------------------------------------------------end iteration loop here
+
+	//draw sample plot
+	ratioMapN[std::make_pair(43,36)]->SetMarkerStyle(20);
+	ratioMapN[std::make_pair(43,36)]->Draw("P");
+	c1->Print("Calibration/RatioPlots/Ratio_N_ix48_iy38.png");
 	c1->Clear();
-	ringAveragePeakN->SetMarkerStyle(20);
-	ringAveragePeakN->SetMarkerSize(2);
-	ringAveragePeakN->SetMarkerColor(kBlue+1);
-	ringAveragePeakN->GetYaxis()->SetRangeUser(85,100);
-	ringAveragePeakN->Draw("E");
-	c1->Print("Efficiencies/CrystalCalibData/AveragePeakVsEtaRingN.png");
+	constMapN[std::make_pair(48,38)]->SetMarkerStyle(20);
+	constMapN[std::make_pair(48,38)]->Draw("P");
+	c1->Print("Calibration/ConvergencePlots/CalConst_N_ix48_iy38.png");
 	c1->Clear();
-	ringAverageMeanP->SetMarkerStyle(20);
-	ringAverageMeanP->SetMarkerSize(2);
-	ringAverageMeanP->SetMarkerColor(kBlue+1);
-	ringAverageMeanP->GetYaxis()->SetRangeUser(0.8,1.2);
-	ringAverageMeanP->Draw("E");
-	c1->Print("Efficiencies/CrystalCalibData/AverageMeanVsEtaRingP.png");
+	//initial means
+	meansMapBeforeN->GetZaxis()->SetRangeUser(0.75,1.25);
+	meansMapBeforeN->GetZaxis()->SetLabelSize(0.03);
+	meansMapBeforeN->Draw("colz");
+	c1->Print("Calibration/InitialMeansN.png");
 	c1->Clear();
-	ringAverageMeanN->SetMarkerStyle(20);
-	ringAverageMeanN->SetMarkerSize(2);
-	ringAverageMeanN->SetMarkerColor(kBlue+1);
-	ringAverageMeanN->GetYaxis()->SetRangeUser(0.8,1.2);
-	ringAverageMeanN->Draw("E");
-	c1->Print("Efficiencies/CrystalCalibData/AverageMeanVsEtaRingN.png");
-	c1->Clear();*/
+	meansMapBeforeP->GetZaxis()->SetRangeUser(0.75,1.25);
+	meansMapBeforeP->GetZaxis()->SetLabelSize(0.03);
+	meansMapBeforeP->Draw("colz");
+	c1->Print("Calibration/InitialMeansP.png");
+	c1->Clear();
+	//final means
+	meansMapAfterN->GetZaxis()->SetRangeUser(0.75,1.25);
+	meansMapAfterN->GetZaxis()->SetLabelSize(0.03);
+	meansMapAfterN->Draw("colz");
+	c1->Print("Calibration/FinalMeansN.png");
+	c1->Clear();
+	meansMapAfterP->GetZaxis()->SetRangeUser(0.75,1.25);
+	meansMapAfterP->GetZaxis()->SetLabelSize(0.03);
+	meansMapAfterP->Draw("colz");
+	c1->Print("Calibration/FinalMeansP.png");
+	c1->Clear();
+	//Z mass before
+	zMassBeforeN->GetZaxis()->SetRangeUser(82,102);
+	zMassBeforeN->GetZaxis()->SetLabelSize(0.03);
+	zMassBeforeN->Draw("colz");
+	c1->Print("Calibration/ZMassBeforeN.png");
+	c1->Clear();
+	zMassBeforeP->GetZaxis()->SetRangeUser(82,102);
+	zMassBeforeP->GetZaxis()->SetLabelSize(0.03);
+	zMassBeforeP->Draw("colz");
+	c1->Print("Calibration/ZMassBeforeP.png");
+	c1->Clear();
+	//Z mass after
+	zMassAfterN->GetZaxis()->SetRangeUser(82,102);
+	zMassAfterN->GetZaxis()->SetLabelSize(0.03);
+	zMassAfterN->Draw("colz");
+	c1->Print("Calibration/ZMassAfterN.png");
+	c1->Clear();
+	zMassAfterP->GetZaxis()->SetRangeUser(82,102);
+	zMassAfterP->GetZaxis()->SetLabelSize(0.03);
+	zMassAfterP->Draw("colz");
+	c1->Print("Calibration/ZMassAfterP.png");
+	c1->Clear();
+	//final calibration constants
+	finalCalConstsN->GetZaxis()->SetRangeUser(0.75,1.25);
+	finalCalConstsN->GetZaxis()->SetLabelSize(0.03);
+	finalCalConstsN->Draw("colz");
+	c1->Print("Calibration/FinalCalConstsN.png");
+	c1->Clear();
+	finalCalConstsP->GetZaxis()->SetRangeUser(0.75,1.25);
+	finalCalConstsP->GetZaxis()->SetLabelSize(0.03);
+	finalCalConstsP->Draw("colz");
+	c1->Print("Calibration/FinalCalConstsP.png");
+	c1->Clear();
 		
 	c1->Close();
 	return 0;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

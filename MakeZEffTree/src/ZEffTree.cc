@@ -5,6 +5,11 @@ ZEffTree::ZEffTree(TFile& f, bool writable) : m_file(f) {
     prepBitmap();
 }
 
+/*ZEffTree::ZEffTree(const ZEffTree& oldZ)
+{
+    
+}*/
+
 int ZEffTree::cutToBit(const std::string& cut) {
     std::map<std::string,int>::const_iterator i=cutToBits_.find(cut);
     return (i==cutToBits_.end())?(-1):(i->second);

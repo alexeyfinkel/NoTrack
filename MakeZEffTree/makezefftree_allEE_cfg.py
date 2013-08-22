@@ -8,7 +8,7 @@ process.load("SimGeneral.HepPDTESSource.pythiapdt_cfi")
 process.load("RecoLocalCalo.EcalRecAlgos.EcalSeverityLevelESProducer_cfi") # Alex added
 process.load("ElectroWeakAnalysis.WENu.simpleEleIdSequence_cff") # Alex added
 
-process.load("ZShape.ZFromData.ZFromDataElectrons_newCuts_cfi")
+process.load("ZShape.ZFromData.ZFromDataElectrons_allEE_cfi")
 process.load("Configuration.Geometry.GeometryIdeal_cff")
 process.load("Configuration.StandardSequences.FrontierConditions_GlobalTag_cff")
 process.load("Configuration.StandardSequences.Services_cff") # Alex added
@@ -34,7 +34,7 @@ process.source = cms.Source("PoolSource",
 )
 
 process.TFileService = cms.Service("TFileService",
-    fileName = cms.string("test_newCuts.root"),
+    fileName = cms.string("test_allEE.root"),
 )
 
 process.kt6PFJets = process.kt4PFJets.clone( 
@@ -52,14 +52,18 @@ process.hltPickTriggered = cms.EDFilter('TriggerResultsFilter',
         daqPartitions           = cms.uint32(0x01),                 # used by the definition of the L1 mask
         throw                   = cms.bool(True),                   # throw exception on unknown trigger names
         triggerConditions       = cms.vstring( 
-            '	HLT_Ele27_CaloIdT_CaloIsoVL_TrkIdVL_TrkIsoVL_Ele15_CaloIdT_CaloIsoVL_trackless_v*'
+            #'	HLT_Ele27_CaloIdT_CaloIsoVL_TrkIdVL_TrkIsoVL_Ele15_CaloIdT_CaloIsoVL_trackless_v*'
+            ' HLT_Ele17_CaloIdL_CaloIsoVL_v* ',
+            ' HLT_Ele20_CaloIdVT_CaloIsoVT_TrkIdT_TrkIsoVT_SC4_Mass50_v* ',
+            ' HLT_Ele32_CaloIdT_CaloIsoT_TrkIdT_TrkIsoT_SC17_Mass50_v* '
             )
         )
 
 process.demo = cms.EDAnalyzer('MakeZEffTree',
     quiet = cms.untracked.bool(True),
-    TagProbeProducer = cms.untracked.InputTag('tpMapWP80AndNTSuper'),
+    TagProbeProducer = cms.untracked.InputTag('tpMapWP80AndEESuper'),
     photonTag        = cms.InputTag( "photons" ),
+    electronTag      = cms.InputTag( "gsfElectrons" ),
     recHitCollection_EE = cms.InputTag("reducedEcalRecHitsEE"),
     #TagProbeProducer = cms.untracked.InputTag('tpMapTIDSingleTrigHFSC'), # No trigger matching
     #TagProbeProducer = cms.untracked.InputTag('tpMapTIDDoubleTrigHFTID'), # Trigger matching

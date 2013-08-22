@@ -33,6 +33,8 @@ Implementation:
 #include "DataFormats/Candidate/interface/CandidateFwd.h"
 #include "DataFormats/EgammaCandidates/interface/Photon.h"
 #include "DataFormats/EgammaCandidates/interface/PhotonFwd.h"
+#include "DataFormats/EgammaCandidates/interface/GsfElectron.h"
+#include "DataFormats/EgammaCandidates/interface/GsfElectronFwd.h"
 #include "DataFormats/DetId/interface/DetId.h"
 #include "DataFormats/EcalDetId/interface/EEDetId.h"
 
@@ -94,6 +96,7 @@ class MakeZEffTree : public edm::EDAnalyzer {
         ZEffTree *m_ze;
         edm::InputTag tnpProducer_;
         edm::InputTag photTag_;
+        edm::InputTag eleTag_;
         edm::InputTag recHitCollectionEETag_;
         
         std::vector<edm::InputTag> passProbeCandTags_;
@@ -125,6 +128,7 @@ MakeZEffTree::MakeZEffTree(const edm::ParameterSet& iConfig) {
     std::vector< edm::InputTag > defaultPassProbeCandTags;
     passProbeCandTags_ = iConfig.getUntrackedParameter< std::vector<edm::InputTag> >("passProbeCandTags", defaultPassProbeCandTags);
     photTag_ = iConfig.getParameter< edm::InputTag > ("photonTag");
+    eleTag_ = iConfig.getParameter< edm::InputTag > ("electronTag");
     recHitCollectionEETag_ = iConfig.getParameter< edm::InputTag > ("recHitCollection_EE");
 
     delRMatchingCut_ = iConfig.getUntrackedParameter<double>("dRMatchCut", 0.2);
@@ -155,7 +159,8 @@ void MakeZEffTree::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
     
 
     //if (!iEvent.isRealData()) {
-    if (false) { //note: this block is effectively commented out!
+    //note: this block is effectively commented out!----------------------------
+    if (false) { 
         Handle<edm::HepMCProduct> HepMC;
         iEvent.getByLabel("generator",HepMC);
         const HepMC::GenEvent* genE=HepMC->GetEvent();
@@ -370,6 +375,71 @@ void MakeZEffTree::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
 					    }
 					    //std::cout<<"Next Photon!"<<std::endl;
                 	}
+                    //if no match in photons, check for match to electrons:
+                    if( (!matchFound) && (m_ze->reco.eta[1] < 2.5) )
+                    {
+                        edm::Handle< reco::GsfElectronCollection > eleProbes;
+                        iEvent.getByLabel(eleTag_, eleProbes);
+                        //reco::Photon *thePhot = 0;
+                        for(reco::GsfElectronCollection::const_iterator eleIt = eleProbes->begin(); eleIt != eleProbes->end(); eleIt++)
+                        {	
+                            double tEta = vprobes->p4().eta();
+                            double tPhi = vprobes->p4().phi();
+                            double tPt = vprobes->p4().pt();
+                            double pEta = eleIt->p4().eta();
+                            double pPhi = eleIt->p4().phi();
+                            double pPt = eleIt->p4().pt();
+
+                            double dRval = deltaR(tEta, tPhi, pEta, pPhi);
+                            double dPtRel = 999.0;
+                            double hitSumEnergy = 0;
+                            if (tPt > 0.0) dPtRel = fabs(pPt - tPt) / tPt;
+                            if( dRval < delRMatchingCut_ && dPtRel < delPtRelMatchingCut_ )
+                            {
+                                matchFound = true;
+                                m_ze->reco.Eiso[1] = eleIt->dr03EcalRecHitSumEt()/eleIt->p4().Pt();
+                                m_ze->reco.Hiso[1] = eleIt->dr03HcalTowerSumEt()/eleIt->p4().Pt();
+                                m_ze->reco.RNine[1] = eleIt->r9();
+                                m_ze->reco.HoEM[1] = eleIt->hadronicOverEm();
+                                m_ze->reco.Sieie[1] = eleIt->sigmaIetaIeta();
+                                DetId xtalId = eleIt->superCluster()->seed()->seed();
+                                EEDetId eeId(xtalId);
+                                m_ze->reco.ix[1] = eeId.ix();
+                                m_ze->reco.iy[1] = eeId.iy();
+
+                                std::vector<std::pair<DetId,float> > hafs = eleIt->superCluster()->hitsAndFractions();
+                                std::vector<float> *fracs = new std::vector<float>;
+                                std::vector<int> *vix = new std::vector<int>;
+                                std::vector<int> *viy = new std::vector<int>;
+                                for( std::vector<std::pair<DetId,float> >::const_iterator hafIt = hafs.begin(); hafIt != hafs.end(); hafIt++ )
+                                {
+                                    EEDetId eeId(hafIt->first);
+                                    //std::cout<<"DetID is "<<eeId<<std::endl;
+                                    vix->push_back(eeId.ix());
+                                    viy->push_back(eeId.iy());
+
+                                    EERecHitCollection::const_iterator itrechit = theEndcapEcalRecHits->find(eeId);
+                                    if (itrechit==theEndcapEcalRecHits->end()) continue;
+                                    fracs->push_back( itrechit->energy() );
+                                    hitSumEnergy += itrechit->energy();
+                                    //m_ze->reco.hitsAndFractions->push_back(*hafIt);
+                                }
+                                //normalize hit energies to get energy fractions:
+                                for(unsigned int hit=0;hit<fracs->size(); hit++ )
+                                {
+                                    fracs->at(hit) /= hitSumEnergy;
+                                    //m_ze->hitEnergyFractions->push_back(*hitIt/hitSumEnergy);
+                                    //std::cout<<"Energy Fraction is "<<*hitIt/hitSumEnergy<<std::endl;
+                                }
+
+                                *(m_ze->ixs) = *vix;
+                                *(m_ze->iys) = *viy;
+                                *(m_ze->hitEnergyFractions) = *fracs;
+
+                                //break;
+                            }
+                        }
+                    }
                 	//std::cout<<"Next iType!!!"<<std::endl;
 
                     ///int ppass = ProbePassProbeOverlap(vprobes[0].first,passprobes);
