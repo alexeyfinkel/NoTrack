@@ -21,17 +21,14 @@
 #include "TProfile.h"
 #include "TF1.h"
 #include "TLorentzVector.h"
-#include "TMath.h"
 
 
 #include "../src/ZEffTree.h"
 
-Double_t voigt(Double_t *x, Double_t *par)
-{
-    return par[0]*(TMath::Voigt((x[0]-par[1]),par[2],par[3]));
-}
 
-int crystalCalibTemp()
+bool isPassing(ZEffTree*);
+
+int crystalCalibAllEE()
 {
 	gROOT->SetStyle("Plain");	
 	gStyle->SetErrorX(0);
@@ -41,7 +38,10 @@ int crystalCalibTemp()
 	c1->cd();
 	//c1->SetLeftMargin(0.08);
 	//c1->SetRightMargin(0.12);
-
+	
+	TLegend* l1 = new TLegend(0.65,0.7,0.9,0.9);
+	l1->SetFillColor(10);
+	
 	//iteration number (should be about 10-15)
 	const int nIterations = 15;
 	
@@ -51,31 +51,31 @@ int crystalCalibTemp()
 	//and some hists
 	std::vector<TH1D*> meansN, meansP, meansAll;
 	std::vector<TH1D*> widthsN, widthsP, widthsAll;
-	std::vector<TH1D*> calConstsN, calConstsP, calConstsAll;
+	std::vector<TH1D*> calConstsN, calConstsP, calConstsAll, calConstsAllLowEta;
 	std::vector<TH1D*> zMassN, zMassP, zMassAll;
 	
-	for(int i=25;i<76;i++)
+	for(int i=0;i<101;i++)
 	{
-		for(int j=25;j<76;j++)
+		for(int j=0;j<101;j++)
 		{
 			//if( (((i-50.5)*(i-50.5)+(j-50.5)*(j-50.5))  < 132.25) || (((i-50.5)*(i-50.5)+(j-50.5)*(j-50.5)) > 342.25) ) continue;
 			sprintf(name,"RatioIx%diy%dzP",i,j);
-			sprintf(title,"E_{exp}/E_{obs}, NT+ i_{x} = %d, i_{y} = %d;E_{exp}/E_{obs};Events",i,j);
-			ratioMapP[std::make_pair(i,j)]= new TH1D(name,title,24,0.4,1.6);
+			sprintf(title,"E_{exp}/E_{obs}, EE+ i_{x} = %d, i_{y} = %d;E_{exp}/E_{obs};Events",i,j);
+			ratioMapP[std::make_pair(i,j)]= new TH1D(name,title,12,0.4,1.6);
 			sprintf(name,"RatioIx%diy%dzN",i,j);
-			sprintf(title,"E_{exp}/E_{obs}, NT- i_{x} = %d, i_{y} = %d;E_{exp}/E_{obs};Events",i,j);			
-			ratioMapN[std::make_pair(i,j)]= new TH1D(name,title,24,0.4,1.6);
+			sprintf(title,"E_{exp}/E_{obs}, EE- i_{x} = %d, i_{y} = %d;E_{exp}/E_{obs};Events",i,j);			
+			ratioMapN[std::make_pair(i,j)]= new TH1D(name,title,12,0.4,1.6);
 			sprintf(name,"CalConstIx%diy%dzN",i,j);
-			sprintf(title,"Calib. Const, NT- i_{x} = %d, i_{y} = %d;Iteration;CalConst",i,j);	
+			sprintf(title,"Calib. Const, EE- i_{x} = %d, i_{y} = %d;Iteration;CalConst",i,j);	
 			constMapN[std::make_pair(i,j)]= new TH1D(name,title,nIterations,0,nIterations);  
 			sprintf(name,"CalConstIx%diy%dzP",i,j);
-			sprintf(title,"Calib. Const, NT+ i_{x} = %d, i_{y} = %d;Iteration;CalConst",i,j);	
+			sprintf(title,"Calib. Const, EE+ i_{x} = %d, i_{y} = %d;Iteration;CalConst",i,j);	
 			constMapP[std::make_pair(i,j)]= new TH1D(name,title,nIterations,0,nIterations);	
 			sprintf(name,"zMassIx%diy%dzN",i,j);
-			sprintf(title,"M_{ee}, NT- i_{x} = %d, i_{y} = %d;M_{ee} (GeV);Events/2GeV",i,j);	
+			sprintf(title,"M_{ee}, EE- i_{x} = %d, i_{y} = %d;M_{ee} (GeV);Events/2GeV",i,j);	
 			zMassMapN[std::make_pair(i,j)]= new TH1D(name,title,30,60,120);
 			sprintf(name,"zMassIx%diy%dzP",i,j);
-			sprintf(title,"M_{ee}, NT+ i_{x} = %d, i_{y} = %d;M_{ee} (GeV);Events/2GeV",i,j);	
+			sprintf(title,"M_{ee}, EE+ i_{x} = %d, i_{y} = %d;M_{ee} (GeV);Events/2GeV",i,j);	
 			zMassMapP[std::make_pair(i,j)]= new TH1D(name,title,30,60,120);
 			
 			//initialize consts	to zero, just in case (not actually used):
@@ -90,62 +90,65 @@ int crystalCalibTemp()
 	{
 		//mean ratios
 		sprintf(name,"meansP_%d",i);
-		sprintf(title,"E_{exp}/E_{obs}, NT+, %d Iterations;E_{exp}/E_{obs};Events",i);
+		sprintf(title,"E_{exp}/E_{obs}, EE+, %d Iterations;E_{exp}/E_{obs};Events",i);
 		meansP.push_back(new TH1D(name,title,40,0.8,1.2));
 		sprintf(name,"meansN_%d",i);
-		sprintf(title,"E_{exp}/E_{obs}, NT-, %d Iterations;E_{exp}/E_{obs};Events",i);
+		sprintf(title,"E_{exp}/E_{obs}, EE-, %d Iterations;E_{exp}/E_{obs};Events",i);
 		meansN.push_back(new TH1D(name,title,40,0.8,1.2));
 		sprintf(name,"meansAll_%d",i);
 		sprintf(title,"E_{exp}/E_{obs}, All NT, %d Iterations;E_{exp}/E_{obs};Events",i);
 		meansAll.push_back(new TH1D(name,title,40,0.8,1.2));
 		//widths or ratio distributions per xtl
 		sprintf(name,"widthsP_%d",i);
-		sprintf(title,"#sigma(E_{exp}/E_{obs}), NT+, %d Iterations;#sigma(E_{exp}/E_{obs});Events",i);
+		sprintf(title,"#sigma(E_{exp}/E_{obs}), EE+, %d Iterations;#sigma(E_{exp}/E_{obs});Events",i);
 		widthsP.push_back(new TH1D(name,title,20,0.08,0.18));
 		sprintf(name,"widthsN_%d",i);
-		sprintf(title,"#sigma(E_{exp}/E_{obs}), NT-, %d Iterations;#sigma(E_{exp}/E_{obs});Events",i);
+		sprintf(title,"#sigma(E_{exp}/E_{obs}), EE-, %d Iterations;#sigma(E_{exp}/E_{obs});Events",i);
 		widthsN.push_back(new TH1D(name,title,20,0.08,0.18));
 		sprintf(name,"widthsAll_%d",i);
 		sprintf(title,"#sigma(E_{exp}/E_{obs}), All NT, %d Iterations;#sigma(E_{exp}/E_{obs});Events",i);
 		widthsAll.push_back(new TH1D(name,title,20,0.08,0.18));
 		//calib. const. distributions
 		sprintf(name,"calConstsP_%d",i);
-		sprintf(title,"Cal. Consts, NT+, %d Iterations;CalConst;Events",i);
+		sprintf(title,"Cal. Consts, EE+, %d Iterations;CalConst;Events",i);
 		calConstsP.push_back(new TH1D(name,title,24,0.4,1.6));
 		sprintf(name,"calConstsN_%d",i);
-		sprintf(title,"Cal. Consts, NT-, %d Iterations;CalConst;Events",i);
+		sprintf(title,"Cal. Consts, EE-, %d Iterations;CalConst;Events",i);
 		calConstsN.push_back(new TH1D(name,title,24,0.4,1.6));
 		sprintf(name,"calConstsAll_%d",i);
 		sprintf(title,"Cal. Consts, All NT, %d Iterations;CalConst;Events",i);
 		calConstsAll.push_back(new TH1D(name,title,24,0.4,1.6));
+        sprintf(name,"calConstsAllLowEta_%d",i);
+		sprintf(title,"Cal. Consts, All Low #eta, %d Iterations;CalConst;Events",i);
+		calConstsAllLowEta.push_back(new TH1D(name,title,24,0.6,1.4));
 		//Z mass hists
 		sprintf(name,"zMassN_%d",i);
-		sprintf(title,"M_{ee}, NT-, %d Iterations;M_{ee} (GeV);Events",i);
+		sprintf(title,"M_{ee}, EE-, %d Iterations;M_{ee} (GeV);Events",i);
 		zMassN.push_back(new TH1D(name,title,30,60,120));
 		sprintf(name,"zMassP_%d",i);
-		sprintf(title,"M_{ee}, NT+, %d Iterations;M_{ee} (GeV);Events",i);
+		sprintf(title,"M_{ee}, EE+, %d Iterations;M_{ee} (GeV);Events",i);
 		zMassP.push_back(new TH1D(name,title,30,60,120));
 		sprintf(name,"zMassAll_%d",i);
 		sprintf(title,"M_{ee}, All NT, %d Iterations;M_{ee} (GeV);Events",i);
 		zMassAll.push_back(new TH1D(name,title,30,60,120));
 	}
 	//2-D hists for final Mean Ratios, Z masses before and after:
-	TH2D *meansMapBeforeN = new TH2D("meansMapBeforeN","Mean Before, NT-;i_{x};i_{y}",40,30,70,40,30,70);
-	TH2D *meansMapBeforeP = new TH2D("meansMapBeforeP","Mean Before, NT+;i_{x};i_{y}",40,30,70,40,30,70);
-	TH2D *meansMapAfterN = new TH2D("meansMapAfterN","Mean After, NT-;i_{x};i_{y}",40,30,70,40,30,70);
-	TH2D *meansMapAfterP = new TH2D("meansMapAfterP","Mean After, NT+;i_{x};i_{y}",40,30,70,40,30,70);
-	TH2D *zMassBeforeN = new TH2D("zMassBeforeN","Z Mass Before Calibration, NT-;i_{x};i_{y}",40,30,70,40,30,70);
-	TH2D *zMassBeforeP = new TH2D("zMassBeforeP","Z Mass Before Calibration, NT+;i_{x};i_{y}",40,30,70,40,30,70);
-	TH2D *zMassAfterN = new TH2D("zMassAfterN","Z Mass After Calibration, NT-;i_{x};i_{y}",40,30,70,40,30,70);
-	TH2D *zMassAfterP = new TH2D("zMassAfterP","Z Mass After Calibration, NT+;i_{x};i_{y}",40,30,70,40,30,70);
-	TH2D *finalCalConstsN = new TH2D("finalCalConstsN","Final Calibration Constants, NT-;i_{x};i_{y}",40,30,70,40,30,70);
-	TH2D *finalCalConstsP = new TH2D("finalCalConstsp","Final Calibration Constants, NT+;i_{x};i_{y}",40,30,70,40,30,70);
+	TH2D *meansMapBeforeN = new TH2D("meansMapBeforeN","Mean Before, EE-;i_{x};i_{y}",100,0,100,100,0,100);
+	TH2D *meansMapBeforeP = new TH2D("meansMapBeforeP","Mean Before, EE+;i_{x};i_{y}",100,0,100,100,0,100);
+	TH2D *meansMapAfterN = new TH2D("meansMapAfterN","Mean After, EE-;i_{x};i_{y}",100,0,100,100,0,100);
+	TH2D *meansMapAfterP = new TH2D("meansMapAfterP","Mean After, EE+;i_{x};i_{y}",100,0,100,100,0,100);
+	TH2D *zMassBeforeN = new TH2D("zMassBeforeN","Z Mass Before Calibration, EE-;i_{x};i_{y}",100,0,100,100,0,100);
+	TH2D *zMassBeforeP = new TH2D("zMassBeforeP","Z Mass Before Calibration, EE+;i_{x};i_{y}",100,0,100,100,0,100);
+	TH2D *zMassAfterN = new TH2D("zMassAfterN","Z Mass After Calibration, EE-;i_{x};i_{y}",100,0,100,100,0,100);
+	TH2D *zMassAfterP = new TH2D("zMassAfterP","Z Mass After Calibration, EE+;i_{x};i_{y}",100,0,100,100,0,100);
+	TH2D *finalCalConstsN = new TH2D("finalCalConstsN","Final Calibration Constants, EE-;i_{x};i_{y}",100,0,100,100,0,100);
+	TH2D *finalCalConstsP = new TH2D("finalCalConstsp","Final Calibration Constants, EE+;i_{x};i_{y}",100,0,100,100,0,100);
 	
 	
 		
 	//file to store calibration constants
 	ofstream calFile;
-	calFile.open("Calibration/CalConsts_Data.txt",ios::trunc);
+	calFile.open("Calibration/AllEE/CalConsts_allEE.txt",ios::trunc);
 	if(!calFile.is_open())
 	{
 		std::cout<<"Failed to create cal. constants file. Existing"<<std::endl;
@@ -154,7 +157,7 @@ int crystalCalibTemp()
 	calFile<<std::setprecision(7)<<std::fixed;
 			
 	//grab a data ntuple
-	TFile* f2 = new TFile("/local/cms/user/finkel/NoTrack/Ntuple/DE_ReReco_2012Full_WithClusters_001.root");	
+	TFile* f2 = new TFile("/local/cms/user/finkel/NoTrack/Ntuple/DE_ReReco_2012Full_allEE_001.root");	
 	if(f2 == NULL)
 	{
 		std::cout<<"Failed to open Data file. Exiting."<<std::endl;
@@ -163,7 +166,7 @@ int crystalCalibTemp()
 	
 	
 	//-------------------------------------------------start iterationloop here
-	
+	std::cout<<"Starting first iteration."<<std::endl;
 	for( int iter=1; iter<=nIterations; iter++ )
 	{
 		//make data ntuple:
@@ -183,17 +186,19 @@ int crystalCalibTemp()
 		{
 			ix=ze2->reco.ix[1];//seed ix
 			iy=ze2->reco.iy[1];//seed iy
-			if( (fabs(ze2->reco.eta[1])>2.5) && (fabs(ze2->reco.eta[1])<3.0) 
-				 &&(ix>29) &&(ix<71) &&(iy>29) &&(iy<71)
-				 && ze2->reco.isSelected(1,"NTLooseElectronId-EtaDet") //using only events that pass selection now!
+			if(  isPassing(ze2)     //attempt at my combination EE+EE criterion
+                 //(fabs(ze2->reco.eta[1])>2.5) && (fabs(ze2->reco.eta[1])<3.0) 
+				 //&&(ix>29) &&(ix<71) &&(iy>29) &&(iy<71)
+				 //&& ze2->reco.isSelected(1,"NTLooseElectronId-EtaDet") //using only events that pass selection now!
 			  ) 
 			{	
-				if( (((ix-50.5)*(ix-50.5)+(iy-50.5)*(iy-50.5))  < 132.25) || (((ix-50.5)*(ix-50.5)+(iy-50.5)*(iy-50.5)) > 342.25) )
+				if( (((ix-50.5)*(ix-50.5)+(iy-50.5)*(iy-50.5))  < 132.25) || (((ix-50.5)*(ix-50.5)+(iy-50.5)*(iy-50.5)) > 2550.25) )
 				{
 					ze2->GetNextEvent();
 					continue;
 				}
 
+                //if(fabs(ze2->reco.eta[1])<2.5) std::cout<<"Low-eta found: Eta = "<<ze2->reco.eta[1]<<std::endl;
 				//compute the correction factor for observed energy
 				if(iter==1) correction = 1;
 				correction=0;
@@ -240,7 +245,7 @@ int crystalCalibTemp()
 						{
 							hix = ze2->ixs->at(k);
 							hiy = ze2->iys->at(k);
-							if((hix<25)||(hix>75)||(hiy<25)||(hiy>75))
+							if((hix<0)||(hix>101)||(hiy<0)||(hiy>101))
 							{
 								std::cout<<"Out of bounds: ("<<hix<<","<<hiy<<") Z+; frac = "<<ze2->hitEnergyFractions->at(k)<<std::endl;
 								continue;
@@ -263,7 +268,7 @@ int crystalCalibTemp()
 						{
 							hix = ze2->ixs->at(k);
 							hiy = ze2->iys->at(k);
-							if((hix<25)||(hix>75)||(hiy<25)||(hiy>75))
+							if((hix<0)||(hix>101)||(hiy<0)||(hiy>101))
 							{
 								std::cout<<"Out of bounds: ("<<hix<<","<<hiy<<") Z-; frac = "<<ze2->hitEnergyFractions->at(k)<<std::endl;
 								continue;
@@ -281,39 +286,42 @@ int crystalCalibTemp()
 		//compute next set of constants
 		TF1 *ratioFit = new TF1("fit","gaus",0.4,1.6);
 		TF1 *massFit = new TF1("fit","gaus",70,110);
-        
 		
         //do ratio and Z-peak fitting and fill 2-D hists:
         
-		for(int i=30;i<71;i++)
+		for(int i=0;i<101;i++)
 		{
-			for(int j=30;j<71;j++)
+			for(int j=0;j<101;j++)
 			{
-				if( (((i-50.5)*(i-50.5)+(j-50.5)*(j-50.5))  < 132.25)  || (((i-50.5)*(i-50.5)+(j-50.5)*(j-50.5)) > 342.25) ) continue;
+				if( (((i-50.5)*(i-50.5)+(j-50.5)*(j-50.5))  < 132.25)  || (((i-50.5)*(i-50.5)+(j-50.5)*(j-50.5)) > 2550.25) ) continue;
 				
 				//do ratio fits and hists
                 //negative side
-				if(ratioMapN[std::make_pair(i,j)]->GetEntries() > 30)
+				if(ratioMapN[std::make_pair(i,j)]->GetEntries() > 20)
 				{
 					ratioMapN[std::make_pair(i,j)]->Fit(ratioFit,"QLMN","",0.4,1.6);					
 					constMapN[std::make_pair(i,j)]->SetBinContent(iter,(constMapN[std::make_pair(i,j)]->GetBinContent(iter-1) )*(ratioFit->GetParameter(1) ) );
 					//constMapN[std::make_pair(i,j)]->SetBinError(iter, ratioFit->GetParError(1));
 					calConstsN[iter-1]->Fill( constMapN[std::make_pair(i,j)]->GetBinContent(iter) );
 					calConstsAll[iter-1]->Fill( constMapN[std::make_pair(i,j)]->GetBinContent(iter) );
+                    if( ((i-50.5)*(i-50.5)+(j-50.5)*(j-50.5)) > 342.25 )
+                    {
+                        calConstsAllLowEta[iter-1]->Fill( constMapN[std::make_pair(i,j)]->GetBinContent(iter) );
+                    }
 					meansN[iter-1]->Fill( ratioFit->GetParameter(1) );
 					meansAll[iter-1]->Fill( ratioFit->GetParameter(1) );
 					if(iter==1) 
                     {
-                        meansMapBeforeN->SetBinContent(i-30,j-30,ratioFit->GetParameter(1));
+                        meansMapBeforeN->SetBinContent(i,j,ratioFit->GetParameter(1));
                         zMassMapN[std::make_pair(i,j)]->Fit(massFit,"QLMN","",80,110);
-                        zMassBeforeN->SetBinContent(i-30,j-30,massFit->GetParameter(1));
+                        zMassBeforeN->SetBinContent(i,j,massFit->GetParameter(1));
                     }
 					if(iter==nIterations) 
 					{
-						meansMapAfterN->SetBinContent(i-30,j-30,ratioFit->GetParameter(1) );
-						finalCalConstsN->SetBinContent(i-30,j-30,constMapN[std::make_pair(i,j)]->GetBinContent(iter) );
+						meansMapAfterN->SetBinContent(i,j,ratioFit->GetParameter(1) );
+						finalCalConstsN->SetBinContent(i,j,constMapN[std::make_pair(i,j)]->GetBinContent(iter) );
                         zMassMapN[std::make_pair(i,j)]->Fit(massFit,"QLMN","",75,105);
-                        zMassAfterN->SetBinContent(i-30,j-30,massFit->GetParameter(1));
+                        zMassAfterN->SetBinContent(i,j,massFit->GetParameter(1));
                         calFile<<i<<"\t"<<j<<"\t-1\t"<<(float)(constMapN[std::make_pair(i,j)]->GetBinContent(iter))<<"\t"<<(float)ratioFit->GetParError(1)<<"\n";
 					}
 				
@@ -321,31 +329,35 @@ int crystalCalibTemp()
 					widthsAll[iter-1]->Fill(ratioFit->GetParameter(2));
 				}
 				//sample xtl
-				if(i==48 && j==38) std::cout<<"Mean = "<<ratioFit->GetParameter(1)<<", width = "<<ratioFit->GetParameter(2)<<std::endl;
+				if(i==5 && j==50) std::cout<<"Mean = "<<ratioFit->GetParameter(1)<<", width = "<<ratioFit->GetParameter(2)<<", entries = "<<zMassMapN[std::make_pair(i,j)]->GetEntries()<<std::endl;
 				
                 //now positive side
-				if(ratioMapP[std::make_pair(i,j)]->GetEntries() > 30)
+				if(ratioMapP[std::make_pair(i,j)]->GetEntries() > 20)
 				{
 					ratioMapP[std::make_pair(i,j)]->Fit(ratioFit,"QLMN","",0.4,1.6);					
 					constMapP[std::make_pair(i,j)]->SetBinContent(iter, (constMapP[std::make_pair(i,j)]->GetBinContent(iter-1) )*(ratioFit->GetParameter(1) ));
 					//constMapP[std::make_pair(i,j)]->SetBinError(iter, ratioFit->GetParError(1));
 					calConstsP[iter-1]->Fill( constMapP[std::make_pair(i,j)]->GetBinContent(iter) );
 					calConstsAll[iter-1]->Fill( constMapP[std::make_pair(i,j)]->GetBinContent(iter) );	
+                    if( ((i-50.5)*(i-50.5)+(j-50.5)*(j-50.5)) > 342.25 )
+                    {
+                        calConstsAllLowEta[iter-1]->Fill( constMapP[std::make_pair(i,j)]->GetBinContent(iter) );
+                    }
 					meansP[iter-1]->Fill( ratioFit->GetParameter(1) );
 					meansAll[iter-1]->Fill( ratioFit->GetParameter(1) );			
 					if(iter==1) 
                     {
-                        meansMapBeforeP->SetBinContent(i-30,j-30,ratioFit->GetParameter(1));
+                        meansMapBeforeP->SetBinContent(i,j,ratioFit->GetParameter(1));
                         zMassMapP[std::make_pair(i,j)]->Fit(massFit,"QLMN","",80,110);
-                        zMassBeforeP->SetBinContent(i-30,j-30,massFit->GetParameter(1));
+                        zMassBeforeP->SetBinContent(i,j,massFit->GetParameter(1));
                         
                     }
 					if(iter==nIterations) 
 					{
-						meansMapAfterP->SetBinContent(i-30,j-30,ratioFit->GetParameter(1) );
-						finalCalConstsP->SetBinContent(i-30,j-30,constMapP[std::make_pair(i,j)]->GetBinContent(iter) );
+						meansMapAfterP->SetBinContent(i,j,ratioFit->GetParameter(1) );
+						finalCalConstsP->SetBinContent(i,j,constMapP[std::make_pair(i,j)]->GetBinContent(iter) );
                         zMassMapP[std::make_pair(i,j)]->Fit(massFit,"QLMN","",75,105);
-                        zMassAfterP->SetBinContent(i-30,j-30,massFit->GetParameter(1));
+                        zMassAfterP->SetBinContent(i,j,massFit->GetParameter(1));
                         calFile<<i<<"\t"<<j<<"\t1\t"<<(float)(constMapP[std::make_pair(i,j)]->GetBinContent(iter))<<"\t"<<(float)ratioFit->GetParError(1)<<"\n";
                         
 					}
@@ -353,18 +365,6 @@ int crystalCalibTemp()
 					widthsP[iter-1]->Fill(ratioFit->GetParameter(2));
 					widthsAll[iter-1]->Fill(ratioFit->GetParameter(2));
 				}
-                //draw sample ratio plot
-                if(iter==1 && i==35 && j==55)
-                {
-                    ratioMapN[std::make_pair(i,j)]->SetTitle("E_{T exp}/E_{T obs}, NT-, i_{x}=35, i_{y}=55;E_{T exp}/E_{T obs};Events");
-                    ratioMapN[std::make_pair(i,j)]->SetMarkerStyle(20);
-                    ratioMapN[std::make_pair(i,j)]->Fit(ratioFit,"QLM","",0.4,1.6);
-                    ratioMapN[std::make_pair(i,j)]->Draw("E");
-                    c1->Print("Calibration/SampleRatioPlot_ix35_iy55.png");
-                    c1->Clear();
-
-                }
-                
 				if(iter != nIterations)
 				{
 					ratioMapN[std::make_pair(i,j)]->Reset();
@@ -375,66 +375,55 @@ int crystalCalibTemp()
 			}
 		}
 		
-		//draw ratio distributions:
-		sprintf(filename,"Calibration/MeansByIter/MeansN_after%d.png",iter);
-		meansN[iter-1]->SetMarkerStyle(20);
-		meansN[iter-1]->Draw("P");
-		c1->Print(filename);
-		c1->Clear();
-		sprintf(filename,"Calibration/MeansByIter/MeansP_after%d.png",iter);
-		meansP[iter-1]->SetMarkerStyle(20);
-		meansP[iter-1]->Draw("P");
-		c1->Print(filename);
-		c1->Clear();
-		sprintf(filename,"Calibration/MeansByIter/MeansAll_after%d.png",iter);
-		meansAll[iter-1]->SetMarkerStyle(20);
-		meansAll[iter-1]->Draw("P");
-		c1->Print(filename);
-		c1->Clear();
 		//draw cal. consts distributions
-		sprintf(filename,"Calibration/CalConstsByIter/CalConstsN_after%d.png",iter);
+		sprintf(filename,"Calibration/AllEE/CalConstsByIter/CalConstsN_after%d.png",iter);
 		calConstsN[iter-1]->SetMarkerStyle(20);
 		calConstsN[iter-1]->Draw("P");
 		c1->Print(filename);
 		c1->Clear();
-		sprintf(filename,"Calibration/CalConstsByIter/CalConstsP_after%d.png",iter);
+		sprintf(filename,"Calibration/AllEE/CalConstsByIter/CalConstsP_after%d.png",iter);
 		calConstsP[iter-1]->SetMarkerStyle(20);
 		calConstsP[iter-1]->Draw("P");
 		c1->Print(filename);
 		c1->Clear();
-		sprintf(filename,"Calibration/CalConstsByIter/CalConstsAll_after%d.png",iter);
+		sprintf(filename,"Calibration/AllEE/CalConstsByIter/CalConstsAll_after%d.png",iter);
 		calConstsAll[iter-1]->SetMarkerStyle(20);
 		calConstsAll[iter-1]->Draw("P");
 		c1->Print(filename);
 		c1->Clear();
+        sprintf(filename,"Calibration/AllEE/CalConstsByIter/CalConstsAllLowEta_after%d.png",iter);
+		calConstsAllLowEta[iter-1]->SetMarkerStyle(20);
+		calConstsAllLowEta[iter-1]->Draw("P");
+		c1->Print(filename);
+		c1->Clear();
 		//draw widths distributions
-		sprintf(filename,"Calibration/WidthsByIter/WidthsN_after%d.png",iter);
+		sprintf(filename,"Calibration/AllEE/WidthsByIter/WidthsN_after%d.png",iter);
 		widthsN[iter-1]->SetMarkerStyle(20);
 		widthsN[iter-1]->Draw("P");
 		c1->Print(filename);
 		c1->Clear();
-		sprintf(filename,"Calibration/WidthsByIter/WidthsP_after%d.png",iter);
+		sprintf(filename,"Calibration/AllEE/WidthsByIter/WidthsP_after%d.png",iter);
 		widthsP[iter-1]->SetMarkerStyle(20);
 		widthsP[iter-1]->Draw("P");
 		c1->Print(filename);
 		c1->Clear();
-		sprintf(filename,"Calibration/WidthsByIter/WidthsAll_after%d.png",iter);
+		sprintf(filename,"Calibration/AllEE/WidthsByIter/WidthsAll_after%d.png",iter);
 		widthsAll[iter-1]->SetMarkerStyle(20);
 		widthsAll[iter-1]->Draw("P");
 		c1->Print(filename);
 		c1->Clear();
 		//draw Z mass plots
-		sprintf(filename,"Calibration/ZMassByIter/ZMassN_after%d.png",iter);
+		sprintf(filename,"Calibration/AllEE/ZMassByIter/ZMassN_after%d.png",iter);
 		zMassN[iter-1]->SetMarkerStyle(20);
 		zMassN[iter-1]->Draw("P");
 		c1->Print(filename);
 		c1->Clear();
-		sprintf(filename,"Calibration/ZMassByIter/ZMassP_after%d.png",iter);
+		sprintf(filename,"Calibration/AllEE/ZMassByIter/ZMassP_after%d.png",iter);
 		zMassP[iter-1]->SetMarkerStyle(20);
 		zMassP[iter-1]->Draw("P");
 		c1->Print(filename);
 		c1->Clear();
-		sprintf(filename,"Calibration/MassByIter/ZMassAll_after%d.png",iter);
+		sprintf(filename,"Calibration/AllEE/ZMassByIter/ZMassAll_after%d.png",iter);
 		zMassAll[iter-1]->SetMarkerStyle(20);
 		zMassAll[iter-1]->Draw("P");
 		c1->Print(filename);
@@ -443,141 +432,88 @@ int crystalCalibTemp()
 		//delete the ntuple:
 		delete[] ze2;
 		std::cout<<iter<<" iterations complete!"<<std::endl;
-        
 	}
 	
 	//----------------------------------------------------end iteration loop here
 
-    //voigtian fits
-    TF1 *voigtFit1 = new TF1("fit1",voigt,80,105,4);
-    TF1 *voigtFit2 = new TF1("fit2",voigt,80,105,4);
-    
-    c1->SetMargin(0.08,0.03,0.09,0.05);
-    TLegend* l1 = new TLegend(0.68,0.65,0.97,0.95);
-	l1->SetFillColor(10);
-    
-    zMassAll[nIterations-1]->SetTitle(";M_{ee} (GeV);Events/GeV");
-    zMassAll[nIterations-1]->GetYaxis()->SetTitleOffset(1);
-    zMassAll[nIterations-1]->GetYaxis()->SetTitleSize(0.04);
-    zMassAll[nIterations-1]->GetXaxis()->SetRangeUser(70,110);
-    zMassAll[nIterations-1]->SetMarkerStyle(21);
-    zMassAll[nIterations-1]->SetLineColor(kBlue);
-    zMassAll[nIterations-1]->SetMarkerColor(kBlue+3);
-    zMassAll[nIterations-1]->SetMarkerSize(1.3);
-    voigtFit1->SetParameter(1,90);
-    voigtFit1->SetParLimits(1,80,100);
-    voigtFit1->SetParameter(2,5);
-    voigtFit1->SetParLimits(2,1,20);
-    voigtFit1->FixParameter(3,4.9904);
-    voigtFit1->SetLineWidth(4);
-    voigtFit1->SetLineColor(kBlue);
-    zMassAll[nIterations-1]->Fit(voigtFit1,"LMN","",80,105);
-    sprintf(title,"After Calibration" );
-    l1->AddEntry(voigtFit1,title,"l");
-    sprintf(title,"#mu = %.3g, #sigma = %.3g",(float)voigtFit1->GetParameter(1),(float)voigtFit1->GetParameter(2) );
-    l1->AddEntry(voigtFit1,title,"");
-    
-    zMassAll[0]->SetTitle(";;");
-    zMassAll[0]->SetMarkerStyle(20);
-    zMassAll[0]->SetLineColor(kRed);
-    zMassAll[0]->SetMarkerColor(kRed+2);
-    zMassAll[0]->SetMarkerSize(1.3);
-    voigtFit2->SetParameter(1,90);
-    voigtFit2->SetParLimits(1,80,100);
-    voigtFit2->SetParameter(2,5);
-    voigtFit2->SetParLimits(2,1,20);
-    voigtFit2->FixParameter(3,4.9904);
-    voigtFit2->SetLineWidth(4);
-    voigtFit2->SetLineColor(kRed);
-    zMassAll[0]->Fit(voigtFit2,"LMN","",80,105);
-    sprintf(title,"Before Calibration" );
-    l1->AddEntry(voigtFit2,title,"l");
-    sprintf(title,"#mu = %.3g, #sigma = %.3g",(float)voigtFit2->GetParameter(1),(float)voigtFit2->GetParameter(2) );
-    l1->AddEntry(voigtFit2,title,"");
-    
-    c1->Clear();//just in case    
-    zMassAll[nIterations-1]->DrawCopy("E");
-    voigtFit1->Draw("SAME");
-    zMassAll[nIterations-1]->DrawCopy(" SAME E");
-    //zMassAll[0]->DrawCopy("SAME E");
-    voigtFit2->Draw("SAME");
-    zMassAll[0]->DrawCopy("SAME E");
-    l1->Draw();
-    
-    c1->Print("Calibration/ZMassFullCompare.png");
-	c1->Clear();
-    l1->Clear();    
-	
-    c1->SetTopMargin(0.08);
-    //draw sample plot
+	//draw sample plot
 	ratioMapN[std::make_pair(43,36)]->SetMarkerStyle(20);
-    ratioMapN[std::make_pair(43,36)]->SetMarkerColor(kBlue);
-    ratioMapN[std::make_pair(43,36)]->SetMarkerSize(1.2);
 	ratioMapN[std::make_pair(43,36)]->Draw("P");
-	c1->Print("Calibration/RatioPlots/Ratio_N_ix43_iy36.png");
+	c1->Print("Calibration/AllEE/RatioPlots/Ratio_N_ix48_iy38.png");
 	c1->Clear();
 	constMapN[std::make_pair(48,38)]->SetMarkerStyle(20);
-    constMapN[std::make_pair(48,38)]->SetMarkerColor(kBlue);
-    constMapN[std::make_pair(48,38)]->SetMarkerSize(1.5);
 	constMapN[std::make_pair(48,38)]->Draw("P");
-	c1->Print("Calibration/ConvergencePlots/CalConst_N_ix48_iy38.png");
+	c1->Print("Calibration/AllEE/ConvergencePlots/CalConst_N_ix48_iy38.png");
 	c1->Clear();
 	//initial means
-	meansMapBeforeN->GetZaxis()->SetRangeUser(0.75,1.25);
+	meansMapBeforeN->GetZaxis()->SetRangeUser(0.8,1.2);
 	meansMapBeforeN->GetZaxis()->SetLabelSize(0.03);
 	meansMapBeforeN->Draw("colz");
-	c1->Print("Calibration/InitialMeansN.png");
+	c1->Print("Calibration/AllEE/InitialMeansN.png");
 	c1->Clear();
-	meansMapBeforeP->GetZaxis()->SetRangeUser(0.75,1.25);
+	meansMapBeforeP->GetZaxis()->SetRangeUser(0.8,1.2);
 	meansMapBeforeP->GetZaxis()->SetLabelSize(0.03);
 	meansMapBeforeP->Draw("colz");
-	c1->Print("Calibration/InitialMeansP.png");
+	c1->Print("Calibration/AllEE/InitialMeansP.png");
 	c1->Clear();
 	//final means
-	meansMapAfterN->GetZaxis()->SetRangeUser(0.75,1.25);
+	meansMapAfterN->GetZaxis()->SetRangeUser(0.8,1.2);
 	meansMapAfterN->GetZaxis()->SetLabelSize(0.03);
 	meansMapAfterN->Draw("colz");
-	c1->Print("Calibration/FinalMeansN.png");
+	c1->Print("Calibration/AllEE/FinalMeansN.png");
 	c1->Clear();
-	meansMapAfterP->GetZaxis()->SetRangeUser(0.75,1.25);
+	meansMapAfterP->GetZaxis()->SetRangeUser(0.8,1.2);
 	meansMapAfterP->GetZaxis()->SetLabelSize(0.03);
 	meansMapAfterP->Draw("colz");
-	c1->Print("Calibration/FinalMeansP.png");
+	c1->Print("Calibration/AllEE/FinalMeansP.png");
 	c1->Clear();
 	//Z mass before
 	zMassBeforeN->GetZaxis()->SetRangeUser(82,102);
 	zMassBeforeN->GetZaxis()->SetLabelSize(0.03);
 	zMassBeforeN->Draw("colz");
-	c1->Print("Calibration/ZMassBeforeN.png");
+	c1->Print("Calibration/AllEE/ZMassBeforeN.png");
 	c1->Clear();
 	zMassBeforeP->GetZaxis()->SetRangeUser(82,102);
 	zMassBeforeP->GetZaxis()->SetLabelSize(0.03);
 	zMassBeforeP->Draw("colz");
-	c1->Print("Calibration/ZMassBeforeP.png");
+	c1->Print("Calibration/AllEE/ZMassBeforeP.png");
 	c1->Clear();
 	//Z mass after
 	zMassAfterN->GetZaxis()->SetRangeUser(82,102);
 	zMassAfterN->GetZaxis()->SetLabelSize(0.03);
 	zMassAfterN->Draw("colz");
-	c1->Print("Calibration/ZMassAfterN.png");
+	c1->Print("Calibration/AllEE/ZMassAfterN.png");
 	c1->Clear();
 	zMassAfterP->GetZaxis()->SetRangeUser(82,102);
 	zMassAfterP->GetZaxis()->SetLabelSize(0.03);
 	zMassAfterP->Draw("colz");
-	c1->Print("Calibration/ZMassAfterP.png");
+	c1->Print("Calibration/AllEE/ZMassAfterP.png");
 	c1->Clear();
 	//final calibration constants
-	finalCalConstsN->GetZaxis()->SetRangeUser(0.75,1.25);
+	finalCalConstsN->GetZaxis()->SetRangeUser(0.8,1.2);
 	finalCalConstsN->GetZaxis()->SetLabelSize(0.03);
 	finalCalConstsN->Draw("colz");
-	c1->Print("Calibration/FinalCalConstsN.png");
+	c1->Print("Calibration/AllEE/FinalCalConstsN.png");
 	c1->Clear();
-	finalCalConstsP->GetZaxis()->SetRangeUser(0.75,1.25);
+	finalCalConstsP->GetZaxis()->SetRangeUser(0.8,1.2);
 	finalCalConstsP->GetZaxis()->SetLabelSize(0.03);
 	finalCalConstsP->Draw("colz");
-	c1->Print("Calibration/FinalCalConstsP.png");
+	c1->Print("Calibration/AllEE/FinalCalConstsP.png");
 	c1->Clear();
 		
 	c1->Close();
 	return 0;
+}
+
+
+bool isPassing(ZEffTree* ze)
+{
+    if(  ze->reco.isSelected(1,"NTLooseElectronId-EtaDet")) return true;
+    if(  ze->reco.Sieie[1]<0.029
+      && ze->reco.RNine[1]<1.02 && ze->reco.RNine[1]>0.89
+      && ze->reco.Eiso[1]<0.035
+      && ze->reco.Hiso[1]<0.11
+      && ze->reco.HoEM[1]<0.05
+      && ze->reco.mz>60 && ze->reco.mz<120 ) return true;
+    return false;
 }

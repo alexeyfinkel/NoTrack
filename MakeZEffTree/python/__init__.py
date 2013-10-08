@@ -1,3 +1,3 @@
 #Automatically created by SCRAM
 import os
-__path__.append(os.path.dirname(os.path.abspath(__file__).rsplit('/NoTrack/MakeZeffTree/',1)[0])+'/cfipython/slc5_amd64_gcc462/NoTrack/MakeZeffTree')
+__path__.append(os.path.dirname(os.path.abspath(__file__).rsplit('/NoTrack/MakeZEffTree/',1)[0])+'/cfipython/slc5_amd64_gcc462/NoTrack/MakeZEffTree')

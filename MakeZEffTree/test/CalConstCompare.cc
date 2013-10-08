@@ -87,7 +87,7 @@ int calConstCompare()
     } while(!evensFile.eof());
     //original cal. consts file:
     ifstream constsFile;
-	constsFile.open("Calibration/CalConsts_Data_Full.txt");
+	constsFile.open("Calibration/CalConsts_Data.txt");
 	if(!evensFile.is_open())
 	{
 		std::cout<<"Failed to open original cal. constants file. Existing"<<std::endl;
@@ -122,8 +122,8 @@ int calConstCompare()
             constsDiffN->SetBinContent(i-30,j-30, fabs(ODDScalConstsN->GetBinContent(i-30,j-30)-EVENScalConstsN->GetBinContent(i-30,j-30))  );
             constsDiffP->SetBinContent(i-30,j-30, fabs(ODDScalConstsP->GetBinContent(i-30,j-30)-EVENScalConstsP->GetBinContent(i-30,j-30))  );  
             
-            combinedFile<<i<<"\t"<<j<<"\t-1\t"<<(float)(FullCalConstsN->GetBinContent(i-30,j-30))/sqrt(2)<<"\t"<<(float)(constsDiffN->GetBinContent(i-30,j-30))<<"\n";
-            combinedFile<<i<<"\t"<<j<<"\t1\t"<<(float)(FullCalConstsP->GetBinContent(i-30,j-30))/sqrt(2)<<"\t"<<(float)(constsDiffP->GetBinContent(i-30,j-30))<<"\n";
+            combinedFile<<i<<"\t"<<j<<"\t-1\t"<<(float)(FullCalConstsN->GetBinContent(i-30,j-30))<<"\t"<<(float)(constsDiffN->GetBinContent(i-30,j-30))/sqrt(2)<<"\n";
+            combinedFile<<i<<"\t"<<j<<"\t1\t"<<(float)(FullCalConstsP->GetBinContent(i-30,j-30))<<"\t"<<(float)(constsDiffP->GetBinContent(i-30,j-30))/sqrt(2)<<"\n";
         }
     }
     

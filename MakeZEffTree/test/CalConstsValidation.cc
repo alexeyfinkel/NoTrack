@@ -22,6 +22,8 @@
 #include "TProfile.h"
 #include "TF1.h"
 #include "TLorentzVector.h"
+#include "TLatex.h"
+#include "TColor.h"
 
 
 #include "../src/ZEffTree.h"
@@ -42,10 +44,10 @@ int calConstValidation()
 	//c1->SetLeftMargin(0.08);
 	//c1->SetRightMargin(0.12);
 	
-	TLegend* l1 = new TLegend(0.7,0.7,0.9,0.9);
+    TLegend* l1 = new TLegend(0.68,0.65,0.97,0.97);
 	l1->SetFillColor(10);
-    l1->SetTextSize(0.02);
-    
+    l1->SetTextSize(0.025);
+    l1->SetBorderSize(0);
     //maps:
 	std::map< pair<int,int>, TH1D* > ratioMapBeforeP, ratioMapBeforeN, zMassMapBeforeN, zMassMapBeforeP, ratioMapAfterP, ratioMapAfterN, zMassMapAfterN, zMassMapAfterP; 
 	char title[256],name[128];// filename[128];
@@ -315,7 +317,8 @@ int calConstValidation()
     TF1 *ratioFit = new TF1("fit","gaus",0.4,1.6);
 	TF1 *massFit = new TF1("fit","gaus",70,110);
     TF1 *pullFit = new TF1("fit","gaus",-5,5);
-    TF1 *voigtFit = new TF1("fit",voigt,60,120,4);
+    TF1 *voigtFit1 = new TF1("fit1",voigt,80,105,4);
+    TF1 *voigtFit2 = new TF1("fit2",voigt,80,105,4);
     
     for(int i=30;i<71;i++)
     {
@@ -415,49 +418,115 @@ int calConstValidation()
 	//c1->Print("Calibration/ODDS/ODDSZMassDistAfterP.png");
 	//c1->Clear();
         
-    voigtFit->SetParameter(0,1e5);
-    voigtFit->SetParameter(1,90);
-    voigtFit->SetParLimits(1,80,100);
-    voigtFit->SetParameter(2,5);
-    voigtFit->SetParLimits(2,1,20);
-    voigtFit->SetParameter(3,5);
-    voigtFit->SetParLimits(3,1,20);
+    voigtFit1->SetParameter(0,1e5);
+    voigtFit1->SetParameter(1,90);
+    voigtFit1->SetParLimits(1,80,100);
+    voigtFit1->SetParameter(2,5);
+    voigtFit1->SetParLimits(2,1,20);
+    voigtFit1->SetParameter(3,5);
+    voigtFit1->SetParLimits(3,1,20);
     ODDSzMassDistBeforeAll->SetMarkerStyle(20);
-    ODDSzMassDistBeforeAll->Fit(voigtFit,"LM","",80,105);
-    //sprintf(title,"#mu = %f\n#sigma = %f\nlg = %f",(float)voigtFit->GetParameter(1),(float)voigtFit->GetParameter(2),(float)voigtFit->GetParameter(3)/2);
+    ODDSzMassDistBeforeAll->Fit(voigtFit1,"LMN","",80,105);
+    //sprintf(title,"#mu = %f\n#sigma = %f\nlg = %f",(float)voigtFit1->GetParameter(1),(float)voigtFit1->GetParameter(2),(float)voigtFit1->GetParameter(3)/2);
     ODDSzMassDistBeforeAll->Draw("P");
-    sprintf(title,"#mu = %f",(float)voigtFit->GetParameter(1) );
+    sprintf(title,"#mu = %f",(float)voigtFit1->GetParameter(1) );
     l1->AddEntry(ODDSzMassDistBeforeAll,title,"l");
-    sprintf(title,"#sigma = %f",(float)voigtFit->GetParameter(2) );
+    sprintf(title,"#sigma = %f",(float)voigtFit1->GetParameter(2) );
     l1->AddEntry(ODDSzMassDistBeforeAll,title,"");
-    sprintf(title,"lg = %f",(float)voigtFit->GetParameter(3)/2 );
+    sprintf(title,"lg = %f",(float)voigtFit1->GetParameter(3)/2 );
     l1->AddEntry(ODDSzMassDistBeforeAll,title,"");
     l1->Draw();
 	c1->Print("Calibration/ODDS/ODDSZMassDistBeforeAll.png");
 	c1->Clear();
     l1->Clear();
-    voigtFit->SetParameter(1,90);
-    voigtFit->SetParLimits(1,80,100);
-    voigtFit->SetParameter(2,5);
-    voigtFit->SetParLimits(2,1,20);
-    voigtFit->SetParameter(3,5);
-    voigtFit->SetParLimits(3,1,20);
+    voigtFit1->SetParameter(1,90);
+    voigtFit1->SetParLimits(1,80,100);
+    voigtFit1->SetParameter(2,5);
+    voigtFit1->SetParLimits(2,1,20);
+    voigtFit1->SetParameter(3,5);
+    voigtFit1->SetParLimits(3,1,20);
     ODDSzMassDistAfterAll->SetMarkerStyle(20);
-    ODDSzMassDistAfterAll->Fit(voigtFit,"LM","",80,105);
-    //sprintf(title,"#mu = %f\n#sigma = %f\nlg = %f",(float)voigtFit->GetParameter(1),(float)voigtFit->GetParameter(2),(float)voigtFit->GetParameter(3)/2);
+    ODDSzMassDistAfterAll->Fit(voigtFit1,"LMN","",80,105);
+    //sprintf(title,"#mu = %f\n#sigma = %f\nlg = %f",(float)voigtFit1->GetParameter(1),(float)voigtFit1->GetParameter(2),(float)voigtFit1->GetParameter(3)/2);
     ODDSzMassDistAfterAll->Draw("P");
-    sprintf(title,"#mu = %f",(float)voigtFit->GetParameter(1) );
+    sprintf(title,"#mu = %f",(float)voigtFit1->GetParameter(1) );
     l1->AddEntry(ODDSzMassDistBeforeAll,title,"l");
-    sprintf(title,"#sigma = %f",(float)voigtFit->GetParameter(2) );
+    sprintf(title,"#sigma = %f",(float)voigtFit1->GetParameter(2) );
     l1->AddEntry(ODDSzMassDistBeforeAll,title,"");
-    sprintf(title,"lg = %f",(float)voigtFit->GetParameter(3)/2 );
+    sprintf(title,"lg = %f",(float)voigtFit1->GetParameter(3)/2 );
     l1->AddEntry(ODDSzMassDistBeforeAll,title,"");
     l1->Draw();
 	c1->Print("Calibration/ODDS/ODDSZMassDistAfterAll.png");
 	c1->Clear();
     l1->Clear();
     
+    //nice combination plot
+    c1->SetMargin(0.12,0.02,0.09,0.025);
+    
+    ODDSzMassDistAfterAll->SetTitle(";M_{ee} (GeV);Events/GeV");
+    ODDSzMassDistAfterAll->GetYaxis()->SetTitleOffset(1.4);
+    ODDSzMassDistAfterAll->GetYaxis()->SetTitleSize(0.045);
+    ODDSzMassDistAfterAll->SetMarkerStyle(21);
+    ODDSzMassDistAfterAll->SetLineColor(kBlue);
+    ODDSzMassDistAfterAll->SetMarkerColor(kBlue+3);
+    ODDSzMassDistAfterAll->SetMarkerSize(1.3);
+    voigtFit1->SetParameter(1,90);
+    voigtFit1->SetParLimits(1,80,100);
+    voigtFit1->SetParameter(2,5);
+    voigtFit1->SetParLimits(2,1,20);
+    voigtFit1->FixParameter(3,4.9904);
+    voigtFit1->SetLineWidth(4);
+    voigtFit1->SetLineColor(kBlue);
+    ODDSzMassDistAfterAll->Fit(voigtFit1,"LMN","",80,105);
+    sprintf(title,"After Cross-Calibration" );
+    l1->AddEntry(voigtFit1,title,"l");
+    sprintf(title,"#mu = %.3g, #sigma = %.3g",(float)voigtFit1->GetParameter(1),(float)voigtFit1->GetParameter(2) );
+    l1->AddEntry(voigtFit1,title,"");
+    
+    ODDSzMassDistBeforeAll->SetTitle(";;");
+    ODDSzMassDistBeforeAll->SetMarkerStyle(20);
+    ODDSzMassDistBeforeAll->SetLineColor(kRed);
+    ODDSzMassDistBeforeAll->SetMarkerColor(kRed+2);
+    ODDSzMassDistBeforeAll->SetMarkerSize(1.3);
+    voigtFit2->SetParameter(1,90);
+    voigtFit2->SetParLimits(1,80,100);
+    voigtFit2->SetParameter(2,5);
+    voigtFit2->SetParLimits(2,1,20);
+    voigtFit2->FixParameter(3,4.9904);
+    voigtFit2->SetLineWidth(4);
+    voigtFit2->SetLineColor(kRed);
+    ODDSzMassDistBeforeAll->Fit(voigtFit2,"LMN","",80,105);
+    sprintf(title,"Before Cross-Calibration" );
+    l1->AddEntry(voigtFit2,title,"l");
+    sprintf(title,"#mu = %.3g, #sigma = %.3g",(float)voigtFit2->GetParameter(1),(float)voigtFit2->GetParameter(2) );
+    l1->AddEntry(voigtFit2,title,"");
+    
+    c1->Clear();//just in case    
+    ODDSzMassDistAfterAll->DrawCopy("E");
+    voigtFit1->Draw("SAME");
+    ODDSzMassDistAfterAll->DrawCopy(" SAME E");
+    //ODDSzMassDistBeforeAll->DrawCopy("SAME E");
+    voigtFit2->Draw("SAME");
+    ODDSzMassDistBeforeAll->DrawCopy("SAME E");
+    l1->Draw();
+    
+    TLatex theTitle;
+	theTitle.SetTextSize(0.03);
+	theTitle.SetTextFont(42);
+	theTitle.SetNDC(true);    
+    theTitle.DrawLatex(0.16,0.9,"CMS preliminary");
+    theTitle.DrawLatex(0.16,0.85,"|#eta_{1}| < 2.5,  2.5 < |#eta_{2}| < 3.0");
+    theTitle.DrawLatex(0.16,0.8,"2012 -- #sqrt{s} = 8 TeV");
+    theTitle.DrawLatex(0.16,0.75,"#intL = 19 fb^{-1}, split sample calibration");
+    
+    //c1->Update();
+    c1->Print("Calibration/ODDSzMassCompare.eps");
+	c1->Clear();
+    l1->Clear();
+    
     std::cout<<"ODDS done."<<std::endl;
+    
+    c1->SetMargin(0.08,0.04,0.1,0.07);
     
     //NOW loop over the EVENS ntuple---------------------------------------------------------------------------------------------
     for(int event=0; event<ze2->Entries(); event++ ) 
@@ -653,48 +722,48 @@ int calConstValidation()
 	//c1->Print("Calibration/EVENS/EVENSZMassDistAfterP.png");
 	//c1->Clear();
     
-    voigtFit->SetParameter(0,1e4);
-    voigtFit->SetParameter(1,90);
-    voigtFit->SetParLimits(1,80,100);
-    voigtFit->SetParameter(2,5);
-    voigtFit->SetParLimits(2,1,20);
-    voigtFit->SetParameter(3,5);
-    voigtFit->SetParLimits(3,1,20);
+    voigtFit1->SetParameter(0,1e4);
+    voigtFit1->SetParameter(1,90);
+    voigtFit1->SetParLimits(1,80,100);
+    voigtFit1->SetParameter(2,5);
+    voigtFit1->SetParLimits(2,1,20);
+    voigtFit1->SetParameter(3,5);
+    voigtFit1->SetParLimits(3,1,20);
     EVENSzMassDistBeforeAll->SetMarkerStyle(20);
-    EVENSzMassDistBeforeAll->Fit(voigtFit,"LM","",80,105);
-    //sprintf(title,"#mu = %f\n#sigma = %f\nlg = %f",(float)voigtFit->GetParameter(1),(float)voigtFit->GetParameter(2),(float)voigtFit->GetParameter(3)/2);
+    EVENSzMassDistBeforeAll->Fit(voigtFit1,"LM","",80,105);
+    //sprintf(title,"#mu = %f\n#sigma = %f\nlg = %f",(float)voigtFit1->GetParameter(1),(float)voigtFit1->GetParameter(2),(float)voigtFit1->GetParameter(3)/2);
     EVENSzMassDistBeforeAll->Draw("P");
-    sprintf(title,"#mu = %f",(float)voigtFit->GetParameter(1) );
+    sprintf(title,"#mu = %f",(float)voigtFit1->GetParameter(1) );
     l1->AddEntry(EVENSzMassDistBeforeAll,title,"l");
-    sprintf(title,"#sigma = %f",(float)voigtFit->GetParameter(2) );
+    sprintf(title,"#sigma = %f",(float)voigtFit1->GetParameter(2) );
     l1->AddEntry(EVENSzMassDistBeforeAll,title,"");
-    sprintf(title,"lg = %f",(float)voigtFit->GetParameter(3)/2 );
+    sprintf(title,"lg = %f",(float)voigtFit1->GetParameter(3)/2 );
     l1->AddEntry(EVENSzMassDistBeforeAll,title,"");
     l1->Draw();
 	c1->Print("Calibration/EVENS/EVENSZMassDistBeforeAll.png");
 	c1->Clear();
     l1->Clear();
-    voigtFit->SetParameter(1,90);
-    voigtFit->SetParLimits(1,80,100);
-    voigtFit->SetParameter(2,5);
-    voigtFit->SetParLimits(2,1,20);
-    voigtFit->SetParameter(3,5);
-    voigtFit->SetParLimits(3,1,20);
+    voigtFit1->SetParameter(1,90);
+    voigtFit1->SetParLimits(1,80,100);
+    voigtFit1->SetParameter(2,5);
+    voigtFit1->SetParLimits(2,1,20);
+    voigtFit1->SetParameter(3,5);
+    voigtFit1->SetParLimits(3,1,20);
     EVENSzMassDistAfterAll->SetMarkerStyle(20);
-    EVENSzMassDistAfterAll->Fit(voigtFit,"LM","",80,105);
-    //sprintf(title,"#mu = %f\n#sigma = %f\nlg = %f",(float)voigtFit->GetParameter(1),(float)voigtFit->GetParameter(2),(float)voigtFit->GetParameter(3)/2);
+    EVENSzMassDistAfterAll->Fit(voigtFit1,"LM","",80,105);
+    //sprintf(title,"#mu = %f\n#sigma = %f\nlg = %f",(float)voigtFit1->GetParameter(1),(float)voigtFit1->GetParameter(2),(float)voigtFit1->GetParameter(3)/2);
     EVENSzMassDistAfterAll->Draw("P");
-    sprintf(title,"#mu = %f",(float)voigtFit->GetParameter(1) );
+    sprintf(title,"#mu = %f",(float)voigtFit1->GetParameter(1) );
     l1->AddEntry(EVENSzMassDistBeforeAll,title,"l");
-    sprintf(title,"#sigma = %f",(float)voigtFit->GetParameter(2) );
+    sprintf(title,"#sigma = %f",(float)voigtFit1->GetParameter(2) );
     l1->AddEntry(EVENSzMassDistBeforeAll,title,"");
-    sprintf(title,"lg = %f",(float)voigtFit->GetParameter(3)/2 );
+    sprintf(title,"lg = %f",(float)voigtFit1->GetParameter(3)/2 );
     l1->AddEntry(EVENSzMassDistBeforeAll,title,"");
     l1->Draw();
 	c1->Print("Calibration/EVENS/EVENSZMassDistAfterAll.png");
 	c1->Clear();
     l1->Clear();
-    
+        
     //produce ratio hists:-------------------------------------------------------------------------------------------------------
     //double rn, rp;
     double cOdd, cEven;
@@ -744,18 +813,42 @@ int calConstValidation()
         //(this one seems like I am doing it wrong...)
     }
     //draw them:
+    TLegend* l2 = new TLegend(0.70,0.70,0.96,0.93);
+    l2->SetFillColor(0);
+    l2->SetTextSize(0.05);
     ratiosN->SetMarkerStyle(20);
-	ratiosN->Draw("P");
+    ratiosN->SetMarkerSize(1.2);
+    ratioFit->SetParameter(2,0.01);
+    ratiosN->Fit(ratioFit,"QLM","",0.95,1.05);
+    sprintf(title,"#sigma = %.3g",(float)ratioFit->GetParameter(2) );
+    l2->AddEntry(ratioFit,title,"");
+	ratiosN->Draw("E");
+    l2->Draw();
 	c1->Print("Calibration/OddsEvensRatiosDistN.png");
 	c1->Clear();
+    l2->Clear();
     ratiosP->SetMarkerStyle(20);
-	ratiosP->Draw("P");
+    ratiosP->SetMarkerSize(1.2);
+    ratioFit->SetParameter(2,0.01);
+    ratiosP->Fit(ratioFit,"QLM","",0.95,1.05);
+	ratiosP->Draw("E");
+    sprintf(title,"#sigma = %.3g",(float)ratioFit->GetParameter(2) );
+    l2->AddEntry(ratioFit,title,"");
+    l2->Draw();
 	c1->Print("Calibration/OddsEvensRatiosDistP.png");
 	c1->Clear();
+    l2->Clear();
     ratiosAll->SetMarkerStyle(20);
-	ratiosAll->Draw("P");
+    ratiosAll->SetMarkerSize(1.4);
+    ratioFit->SetParameter(2,0.01);
+    ratiosAll->Fit(ratioFit,"QLM","",0.95,1.05);
+    sprintf(title,"#sigma = %.3g",(float)ratioFit->GetParameter(2) );
+    l2->AddEntry(ratioFit,title,"");
+	ratiosAll->Draw("E");
+    l2->Draw();
 	c1->Print("Calibration/OddsEvensRatiosDistAll.png");
 	c1->Clear();
+    l2->Clear();
     constsDiff->SetMarkerStyle(20);
 	constsDiff->Draw("P");
 	c1->Print("Calibration/OddsEvensDifferenceAll.png");

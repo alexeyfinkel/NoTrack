@@ -52,14 +52,14 @@ process.hltPickTriggered = cms.EDFilter('TriggerResultsFilter',
         daqPartitions           = cms.uint32(0x01),                 # used by the definition of the L1 mask
         throw                   = cms.bool(True),                   # throw exception on unknown trigger names
         triggerConditions       = cms.vstring( 
-            #'	HLT_Ele27_CaloIdT_CaloIsoVL_TrkIdVL_TrkIsoVL_Ele15_CaloIdT_CaloIsoVL_trackless_v*'
+            '	HLT_Ele27_CaloIdT_CaloIsoVL_TrkIdVL_TrkIsoVL_Ele15_CaloIdT_CaloIsoVL_trackless_v*',
             ' HLT_Ele17_CaloIdL_CaloIsoVL_v* ',
             ' HLT_Ele20_CaloIdVT_CaloIsoVT_TrkIdT_TrkIsoVT_SC4_Mass50_v* ',
             ' HLT_Ele32_CaloIdT_CaloIsoT_TrkIdT_TrkIsoT_SC17_Mass50_v* '
             )
         )
 
-process.demo = cms.EDAnalyzer('MakeZEffTree',
+process.demo = cms.EDAnalyzer('MakeZEffTreeAllEE',
     quiet = cms.untracked.bool(True),
     TagProbeProducer = cms.untracked.InputTag('tpMapWP80AndEESuper'),
     photonTag        = cms.InputTag( "photons" ),

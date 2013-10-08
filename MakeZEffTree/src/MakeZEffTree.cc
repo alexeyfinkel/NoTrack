@@ -39,6 +39,8 @@ Implementation:
 #include "DataFormats/EcalDetId/interface/EEDetId.h"
 
 #include "SimDataFormats/GeneratorProducts/interface/HepMCProduct.h"
+#include "DataFormats/HepMCCandidate/interface/GenParticle.h"
+#include "DataFormats/HepMCCandidate/interface/GenParticleFwd.h"
 
 #include "FWCore/ServiceRegistry/interface/Service.h"
 #include "CommonTools/UtilAlgos/interface/TFileService.h"
@@ -101,6 +103,7 @@ class MakeZEffTree : public edm::EDAnalyzer {
         
         std::vector<edm::InputTag> passProbeCandTags_;
         double delRMatchingCut_, delPtRelMatchingCut_;
+        bool allEEflag_;
         std::vector<std::string> cutName_;
 
 };
@@ -134,6 +137,7 @@ MakeZEffTree::MakeZEffTree(const edm::ParameterSet& iConfig) {
     delRMatchingCut_ = iConfig.getUntrackedParameter<double>("dRMatchCut", 0.2);
     delPtRelMatchingCut_ = iConfig.getUntrackedParameter<double>("dPtMatchCut", 15.0);
     cutName_ = iConfig.getUntrackedParameter< std::vector<std::string> >("CutNames");
+    allEEflag_ = iConfig.getUntrackedParameter<bool>("allEE_flag",false);
 
 }
 
@@ -158,10 +162,10 @@ void MakeZEffTree::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
 
     
 
-    //if (!iEvent.isRealData()) {
+    if (!iEvent.isRealData()) {
     //note: this block is effectively commented out!----------------------------
-    if (false) { 
-        Handle<edm::HepMCProduct> HepMC;
+    //if (false) { 
+        /*Handle<edm::HepMCProduct> HepMC;
         iEvent.getByLabel("generator",HepMC);
         const HepMC::GenEvent* genE=HepMC->GetEvent();
 
@@ -186,13 +190,15 @@ void MakeZEffTree::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
                 }
             } 
         }
+        
+        
 
         if (ge0==0 || ge1==0 || Z->momentum().m() < 40) {
             // Low mass or failed to get electrons
             return;
         }
 
-        // ge0 is always the highest pt electron
+         ge0 is always the highest pt electron
         if (ge1->momentum().perp() > ge0->momentum().perp()) {
             std::swap(ge0,ge1);
         }
@@ -226,7 +232,72 @@ void MakeZEffTree::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
         m_ze->gen.yz = 0.5*log((Z->momentum().e()+Z->momentum().pz())/(Z->momentum().e()-Z->momentum().pz()));
         m_ze->gen.qtz = Z->momentum().perp();
         m_ze->gen.nverts = npv;
-        m_ze->gen.phistar = MakeZEffTree::getPhiStar( m_ze->gen.eta[0], m_ze->gen.phi[0], m_ze->gen.charge[0], m_ze->gen.eta[1], m_ze->gen.phi[1]);
+        m_ze->gen.phistar = MakeZEffTree::getPhiStar( m_ze->gen.eta[0], m_ze->gen.phi[0], m_ze->gen.charge[0], m_ze->gen.eta[1], m_ze->gen.phi[1]);*/
+
+        int nElec = 0;
+        reco::Particle::LorentzVector pe1(0,0,0,0), pe2(0,0,0,0), pZ(0,0,0,0);
+        edm::Handle<reco::GenParticleCollection> genInfo;
+        if (iEvent.getByLabel("genParticles",genInfo))
+        {
+            reco::GenParticleCollection::const_iterator iparticle ;
+            for (iparticle=genInfo->begin(); iparticle!=genInfo->end(); iparticle++) 
+            {
+                if ( iparticle->pdgId() == 23 && iparticle->numberOfDaughters() > 0 )
+                {
+                    for (unsigned int idg=0; idg<iparticle->numberOfDaughters(); idg++)
+                    {
+                        if ( abs(iparticle->daughter(idg)->pdgId()) == 11 )
+                        {
+                            nElec++;
+                            if(nElec==1) pe1=iparticle->daughter(idg)->p4();
+                            else if(nElec==2)
+                            {
+                                pe2=iparticle->daughter(idg)->p4();
+                                pZ= pe1+pe2;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        //sanity check:
+        if(pe1.pt()<5||pe2.pt()<5||pZ.mass()<40) return;
+        
+        if(pe1.pt()>pe2.pt())
+        {
+            m_ze->gen.eta[0] = pe1.eta();
+            m_ze->gen.eta[1] = pe2.eta();
+            m_ze->gen.phi[0] = pe1.phi();
+            m_ze->gen.phi[1] = pe2.phi();
+            m_ze->gen.pt[0] = pe1.pt();
+            m_ze->gen.pt[1] = pe2.pt();
+        }
+        else
+        {
+            m_ze->gen.eta[0] = pe2.eta();
+            m_ze->gen.eta[1] = pe1.eta();
+            m_ze->gen.phi[0] = pe2.phi();
+            m_ze->gen.phi[1] = pe1.phi();
+            m_ze->gen.pt[0] = pe2.pt();
+            m_ze->gen.pt[1] = pe1.pt();
+        }
+        m_ze->gen.mz = pZ.mass();
+        m_ze->gen.yz = 0.5*log((pZ.e()+pZ.pz())/(pZ.e()-pZ.pz()));
+        m_ze->gen.qtz = pZ.pt();
+        
+        edm::Handle<std::vector<PileupSummaryInfo> > pPU;
+        iEvent.getByLabel("addPileupInfo", pPU);
+        std::vector<PileupSummaryInfo>::const_iterator pPUI;
+
+        int npv = 1; // Does not include primary vert
+        for(pPUI = pPU->begin(); pPUI != pPU->end(); ++pPUI) {
+            if (pPUI->getBunchCrossing() == 0) {
+                npv = pPUI->getPU_NumInteractions() + 1;
+                break;
+            }
+        }
+        m_ze->gen.nverts = npv;
     }
 
     edm::Handle<reco::CandidateView> tagprobes;
@@ -376,7 +447,7 @@ void MakeZEffTree::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
 					    //std::cout<<"Next Photon!"<<std::endl;
                 	}
                     //if no match in photons, check for match to electrons:
-                    if( (!matchFound) && (m_ze->reco.eta[1] < 2.5) )
+                    if( (!matchFound) && (m_ze->reco.eta[1] < 2.5) && allEEflag_)
                     {
                         edm::Handle< reco::GsfElectronCollection > eleProbes;
                         iEvent.getByLabel(eleTag_, eleProbes);
