@@ -21,17 +21,25 @@
 #include "TProfile.h"
 #include "TF1.h"
 #include "TLorentzVector.h"
+<<<<<<< HEAD
 #include "TMath.h"
+=======
+>>>>>>> 66bddbe765e6cbb1a8c7d372ce6aa6ddc7c6b8e2
 
 
 #include "../src/ZEffTree.h"
 
+<<<<<<< HEAD
 Double_t voigt(Double_t *x, Double_t *par)
 {
     return par[0]*(TMath::Voigt((x[0]-par[1]),par[2],par[3]));
 }
 
 int crystalCalibMC()
+=======
+
+int crystalCalibTemp()
+>>>>>>> 66bddbe765e6cbb1a8c7d372ce6aa6ddc7c6b8e2
 {
 	gROOT->SetStyle("Plain");	
 	gStyle->SetErrorX(0);
@@ -41,7 +49,14 @@ int crystalCalibMC()
 	c1->cd();
 	//c1->SetLeftMargin(0.08);
 	//c1->SetRightMargin(0.12);
+<<<<<<< HEAD
 
+=======
+	
+	TLegend* l1 = new TLegend(0.65,0.7,0.9,0.9);
+	l1->SetFillColor(10);
+	
+>>>>>>> 66bddbe765e6cbb1a8c7d372ce6aa6ddc7c6b8e2
 	//iteration number (should be about 10-15)
 	const int nIterations = 15;
 	
@@ -61,10 +76,17 @@ int crystalCalibMC()
 			//if( (((i-50.5)*(i-50.5)+(j-50.5)*(j-50.5))  < 132.25) || (((i-50.5)*(i-50.5)+(j-50.5)*(j-50.5)) > 342.25) ) continue;
 			sprintf(name,"RatioIx%diy%dzP",i,j);
 			sprintf(title,"E_{exp}/E_{obs}, NT+ i_{x} = %d, i_{y} = %d;E_{exp}/E_{obs};Events",i,j);
+<<<<<<< HEAD
 			ratioMapP[std::make_pair(i,j)]= new TH1D(name,title,24,0.4,1.6);
 			sprintf(name,"RatioIx%diy%dzN",i,j);
 			sprintf(title,"E_{exp}/E_{obs}, NT- i_{x} = %d, i_{y} = %d;E_{exp}/E_{obs};Events",i,j);			
 			ratioMapN[std::make_pair(i,j)]= new TH1D(name,title,24,0.4,1.6);
+=======
+			ratioMapP[std::make_pair(i,j)]= new TH1D(name,title,12,0.4,1.6);
+			sprintf(name,"RatioIx%diy%dzN",i,j);
+			sprintf(title,"E_{exp}/E_{obs}, NT- i_{x} = %d, i_{y} = %d;E_{exp}/E_{obs};Events",i,j);			
+			ratioMapN[std::make_pair(i,j)]= new TH1D(name,title,12,0.4,1.6);
+>>>>>>> 66bddbe765e6cbb1a8c7d372ce6aa6ddc7c6b8e2
 			sprintf(name,"CalConstIx%diy%dzN",i,j);
 			sprintf(title,"Calib. Const, NT- i_{x} = %d, i_{y} = %d;Iteration;CalConst",i,j);	
 			constMapN[std::make_pair(i,j)]= new TH1D(name,title,nIterations,0,nIterations);  
@@ -145,7 +167,11 @@ int crystalCalibMC()
 		
 	//file to store calibration constants
 	ofstream calFile;
+<<<<<<< HEAD
 	calFile.open("Calibration/MC/CalConsts_Data.txt",ios::trunc);
+=======
+	calFile.open("Calibration/CalConsts_Data.txt",ios::trunc);
+>>>>>>> 66bddbe765e6cbb1a8c7d372ce6aa6ddc7c6b8e2
 	if(!calFile.is_open())
 	{
 		std::cout<<"Failed to create cal. constants file. Existing"<<std::endl;
@@ -154,7 +180,11 @@ int crystalCalibMC()
 	calFile<<std::setprecision(7)<<std::fixed;
 			
 	//grab a data ntuple
+<<<<<<< HEAD
 	TFile* f2 = new TFile("/local/cms/user/finkel/NoTrack/Ntuple/DE_MC_withClusters/DE_MC_withClusters_001.root");	
+=======
+	TFile* f2 = new TFile("/local/cms/user/finkel/NoTrack/Ntuple/DE_ReReco_2012Full_WithClusters_001.root");	
+>>>>>>> 66bddbe765e6cbb1a8c7d372ce6aa6ddc7c6b8e2
 	if(f2 == NULL)
 	{
 		std::cout<<"Failed to open Data file. Exiting."<<std::endl;
@@ -281,7 +311,10 @@ int crystalCalibMC()
 		//compute next set of constants
 		TF1 *ratioFit = new TF1("fit","gaus",0.4,1.6);
 		TF1 *massFit = new TF1("fit","gaus",70,110);
+<<<<<<< HEAD
         
+=======
+>>>>>>> 66bddbe765e6cbb1a8c7d372ce6aa6ddc7c6b8e2
 		
         //do ratio and Z-peak fitting and fill 2-D hists:
         
@@ -353,6 +386,7 @@ int crystalCalibMC()
 					widthsP[iter-1]->Fill(ratioFit->GetParameter(2));
 					widthsAll[iter-1]->Fill(ratioFit->GetParameter(2));
 				}
+<<<<<<< HEAD
                 //draw sample ratio plot
                 if(iter==1 && i==35 && j==55)
                 {
@@ -365,6 +399,8 @@ int crystalCalibMC()
 
                 }
                 
+=======
+>>>>>>> 66bddbe765e6cbb1a8c7d372ce6aa6ddc7c6b8e2
 				if(iter != nIterations)
 				{
 					ratioMapN[std::make_pair(i,j)]->Reset();
@@ -376,65 +412,113 @@ int crystalCalibMC()
 		}
 		
 		//draw ratio distributions:
+<<<<<<< HEAD
 		sprintf(filename,"Calibration/MC/MeansByIter/MeansN_after%d.png",iter);
+=======
+		sprintf(filename,"Calibration/MeansByIter/MeansN_after%d.png",iter);
+>>>>>>> 66bddbe765e6cbb1a8c7d372ce6aa6ddc7c6b8e2
 		meansN[iter-1]->SetMarkerStyle(20);
 		meansN[iter-1]->Draw("P");
 		c1->Print(filename);
 		c1->Clear();
+<<<<<<< HEAD
 		sprintf(filename,"Calibration/MC/MeansByIter/MeansP_after%d.png",iter);
+=======
+		sprintf(filename,"Calibration/MeansByIter/MeansP_after%d.png",iter);
+>>>>>>> 66bddbe765e6cbb1a8c7d372ce6aa6ddc7c6b8e2
 		meansP[iter-1]->SetMarkerStyle(20);
 		meansP[iter-1]->Draw("P");
 		c1->Print(filename);
 		c1->Clear();
+<<<<<<< HEAD
 		sprintf(filename,"Calibration/MC/MeansByIter/MeansAll_after%d.png",iter);
+=======
+		sprintf(filename,"Calibration/MeansByIter/MeansAll_after%d.png",iter);
+>>>>>>> 66bddbe765e6cbb1a8c7d372ce6aa6ddc7c6b8e2
 		meansAll[iter-1]->SetMarkerStyle(20);
 		meansAll[iter-1]->Draw("P");
 		c1->Print(filename);
 		c1->Clear();
 		//draw cal. consts distributions
+<<<<<<< HEAD
 		sprintf(filename,"Calibration/MC/CalConstsByIter/CalConstsN_after%d.png",iter);
+=======
+		sprintf(filename,"Calibration/CalConstsByIter/CalConstsN_after%d.png",iter);
+>>>>>>> 66bddbe765e6cbb1a8c7d372ce6aa6ddc7c6b8e2
 		calConstsN[iter-1]->SetMarkerStyle(20);
 		calConstsN[iter-1]->Draw("P");
 		c1->Print(filename);
 		c1->Clear();
+<<<<<<< HEAD
 		sprintf(filename,"Calibration/MC/CalConstsByIter/CalConstsP_after%d.png",iter);
+=======
+		sprintf(filename,"Calibration/CalConstsByIter/CalConstsP_after%d.png",iter);
+>>>>>>> 66bddbe765e6cbb1a8c7d372ce6aa6ddc7c6b8e2
 		calConstsP[iter-1]->SetMarkerStyle(20);
 		calConstsP[iter-1]->Draw("P");
 		c1->Print(filename);
 		c1->Clear();
+<<<<<<< HEAD
 		sprintf(filename,"Calibration/MC/CalConstsByIter/CalConstsAll_after%d.png",iter);
+=======
+		sprintf(filename,"Calibration/CalConstsByIter/CalConstsAll_after%d.png",iter);
+>>>>>>> 66bddbe765e6cbb1a8c7d372ce6aa6ddc7c6b8e2
 		calConstsAll[iter-1]->SetMarkerStyle(20);
 		calConstsAll[iter-1]->Draw("P");
 		c1->Print(filename);
 		c1->Clear();
 		//draw widths distributions
+<<<<<<< HEAD
 		sprintf(filename,"Calibration/MC/WidthsByIter/WidthsN_after%d.png",iter);
+=======
+		sprintf(filename,"Calibration/WidthsByIter/WidthsN_after%d.png",iter);
+>>>>>>> 66bddbe765e6cbb1a8c7d372ce6aa6ddc7c6b8e2
 		widthsN[iter-1]->SetMarkerStyle(20);
 		widthsN[iter-1]->Draw("P");
 		c1->Print(filename);
 		c1->Clear();
+<<<<<<< HEAD
 		sprintf(filename,"Calibration/MC/WidthsByIter/WidthsP_after%d.png",iter);
+=======
+		sprintf(filename,"Calibration/WidthsByIter/WidthsP_after%d.png",iter);
+>>>>>>> 66bddbe765e6cbb1a8c7d372ce6aa6ddc7c6b8e2
 		widthsP[iter-1]->SetMarkerStyle(20);
 		widthsP[iter-1]->Draw("P");
 		c1->Print(filename);
 		c1->Clear();
+<<<<<<< HEAD
 		sprintf(filename,"Calibration/MC/WidthsByIter/WidthsAll_after%d.png",iter);
+=======
+		sprintf(filename,"Calibration/WidthsByIter/WidthsAll_after%d.png",iter);
+>>>>>>> 66bddbe765e6cbb1a8c7d372ce6aa6ddc7c6b8e2
 		widthsAll[iter-1]->SetMarkerStyle(20);
 		widthsAll[iter-1]->Draw("P");
 		c1->Print(filename);
 		c1->Clear();
 		//draw Z mass plots
+<<<<<<< HEAD
 		sprintf(filename,"Calibration/MC/ZMassByIter/ZMassN_after%d.png",iter);
+=======
+		sprintf(filename,"Calibration/ZMassByIter/ZMassN_after%d.png",iter);
+>>>>>>> 66bddbe765e6cbb1a8c7d372ce6aa6ddc7c6b8e2
 		zMassN[iter-1]->SetMarkerStyle(20);
 		zMassN[iter-1]->Draw("P");
 		c1->Print(filename);
 		c1->Clear();
+<<<<<<< HEAD
 		sprintf(filename,"Calibration/MC/ZMassByIter/ZMassP_after%d.png",iter);
+=======
+		sprintf(filename,"Calibration/ZMassByIter/ZMassP_after%d.png",iter);
+>>>>>>> 66bddbe765e6cbb1a8c7d372ce6aa6ddc7c6b8e2
 		zMassP[iter-1]->SetMarkerStyle(20);
 		zMassP[iter-1]->Draw("P");
 		c1->Print(filename);
 		c1->Clear();
+<<<<<<< HEAD
 		sprintf(filename,"Calibration/MC/MassByIter/ZMassAll_after%d.png",iter);
+=======
+		sprintf(filename,"Calibration/MassByIter/ZMassAll_after%d.png",iter);
+>>>>>>> 66bddbe765e6cbb1a8c7d372ce6aa6ddc7c6b8e2
 		zMassAll[iter-1]->SetMarkerStyle(20);
 		zMassAll[iter-1]->Draw("P");
 		c1->Print(filename);
@@ -443,11 +527,15 @@ int crystalCalibMC()
 		//delete the ntuple:
 		delete[] ze2;
 		std::cout<<iter<<" iterations complete!"<<std::endl;
+<<<<<<< HEAD
         
+=======
+>>>>>>> 66bddbe765e6cbb1a8c7d372ce6aa6ddc7c6b8e2
 	}
 	
 	//----------------------------------------------------end iteration loop here
 
+<<<<<<< HEAD
     //voigtian fits
     TF1 *voigtFit1 = new TF1("fit1",voigt,80,105,4);
     TF1 *voigtFit2 = new TF1("fit2",voigt,80,105,4);
@@ -521,61 +609,111 @@ int crystalCalibMC()
     constMapN[std::make_pair(48,38)]->SetMarkerSize(1.5);
 	constMapN[std::make_pair(48,38)]->Draw("P");
 	c1->Print("Calibration/MC/ConvergencePlots/CalConst_N_ix48_iy38.png");
+=======
+	//draw sample plot
+	ratioMapN[std::make_pair(43,36)]->SetMarkerStyle(20);
+	ratioMapN[std::make_pair(43,36)]->Draw("P");
+	c1->Print("Calibration/RatioPlots/Ratio_N_ix48_iy38.png");
+	c1->Clear();
+	constMapN[std::make_pair(48,38)]->SetMarkerStyle(20);
+	constMapN[std::make_pair(48,38)]->Draw("P");
+	c1->Print("Calibration/ConvergencePlots/CalConst_N_ix48_iy38.png");
+>>>>>>> 66bddbe765e6cbb1a8c7d372ce6aa6ddc7c6b8e2
 	c1->Clear();
 	//initial means
 	meansMapBeforeN->GetZaxis()->SetRangeUser(0.75,1.25);
 	meansMapBeforeN->GetZaxis()->SetLabelSize(0.03);
 	meansMapBeforeN->Draw("colz");
+<<<<<<< HEAD
 	c1->Print("Calibration/MC/InitialMeansN.png");
+=======
+	c1->Print("Calibration/InitialMeansN.png");
+>>>>>>> 66bddbe765e6cbb1a8c7d372ce6aa6ddc7c6b8e2
 	c1->Clear();
 	meansMapBeforeP->GetZaxis()->SetRangeUser(0.75,1.25);
 	meansMapBeforeP->GetZaxis()->SetLabelSize(0.03);
 	meansMapBeforeP->Draw("colz");
+<<<<<<< HEAD
 	c1->Print("Calibration/MC/InitialMeansP.png");
+=======
+	c1->Print("Calibration/InitialMeansP.png");
+>>>>>>> 66bddbe765e6cbb1a8c7d372ce6aa6ddc7c6b8e2
 	c1->Clear();
 	//final means
 	meansMapAfterN->GetZaxis()->SetRangeUser(0.75,1.25);
 	meansMapAfterN->GetZaxis()->SetLabelSize(0.03);
 	meansMapAfterN->Draw("colz");
+<<<<<<< HEAD
 	c1->Print("Calibration/MC/FinalMeansN.png");
+=======
+	c1->Print("Calibration/FinalMeansN.png");
+>>>>>>> 66bddbe765e6cbb1a8c7d372ce6aa6ddc7c6b8e2
 	c1->Clear();
 	meansMapAfterP->GetZaxis()->SetRangeUser(0.75,1.25);
 	meansMapAfterP->GetZaxis()->SetLabelSize(0.03);
 	meansMapAfterP->Draw("colz");
+<<<<<<< HEAD
 	c1->Print("Calibration/MC/FinalMeansP.png");
+=======
+	c1->Print("Calibration/FinalMeansP.png");
+>>>>>>> 66bddbe765e6cbb1a8c7d372ce6aa6ddc7c6b8e2
 	c1->Clear();
 	//Z mass before
 	zMassBeforeN->GetZaxis()->SetRangeUser(82,102);
 	zMassBeforeN->GetZaxis()->SetLabelSize(0.03);
 	zMassBeforeN->Draw("colz");
+<<<<<<< HEAD
 	c1->Print("Calibration/MC/ZMassBeforeN.png");
+=======
+	c1->Print("Calibration/ZMassBeforeN.png");
+>>>>>>> 66bddbe765e6cbb1a8c7d372ce6aa6ddc7c6b8e2
 	c1->Clear();
 	zMassBeforeP->GetZaxis()->SetRangeUser(82,102);
 	zMassBeforeP->GetZaxis()->SetLabelSize(0.03);
 	zMassBeforeP->Draw("colz");
+<<<<<<< HEAD
 	c1->Print("Calibration/MC/ZMassBeforeP.png");
+=======
+	c1->Print("Calibration/ZMassBeforeP.png");
+>>>>>>> 66bddbe765e6cbb1a8c7d372ce6aa6ddc7c6b8e2
 	c1->Clear();
 	//Z mass after
 	zMassAfterN->GetZaxis()->SetRangeUser(82,102);
 	zMassAfterN->GetZaxis()->SetLabelSize(0.03);
 	zMassAfterN->Draw("colz");
+<<<<<<< HEAD
 	c1->Print("Calibration/MC/ZMassAfterN.png");
+=======
+	c1->Print("Calibration/ZMassAfterN.png");
+>>>>>>> 66bddbe765e6cbb1a8c7d372ce6aa6ddc7c6b8e2
 	c1->Clear();
 	zMassAfterP->GetZaxis()->SetRangeUser(82,102);
 	zMassAfterP->GetZaxis()->SetLabelSize(0.03);
 	zMassAfterP->Draw("colz");
+<<<<<<< HEAD
 	c1->Print("Calibration/MC/ZMassAfterP.png");
+=======
+	c1->Print("Calibration/ZMassAfterP.png");
+>>>>>>> 66bddbe765e6cbb1a8c7d372ce6aa6ddc7c6b8e2
 	c1->Clear();
 	//final calibration constants
 	finalCalConstsN->GetZaxis()->SetRangeUser(0.75,1.25);
 	finalCalConstsN->GetZaxis()->SetLabelSize(0.03);
 	finalCalConstsN->Draw("colz");
+<<<<<<< HEAD
 	c1->Print("Calibration/MC/FinalCalConstsN.png");
+=======
+	c1->Print("Calibration/FinalCalConstsN.png");
+>>>>>>> 66bddbe765e6cbb1a8c7d372ce6aa6ddc7c6b8e2
 	c1->Clear();
 	finalCalConstsP->GetZaxis()->SetRangeUser(0.75,1.25);
 	finalCalConstsP->GetZaxis()->SetLabelSize(0.03);
 	finalCalConstsP->Draw("colz");
+<<<<<<< HEAD
 	c1->Print("Calibration/MC/FinalCalConstsP.png");
+=======
+	c1->Print("Calibration/FinalCalConstsP.png");
+>>>>>>> 66bddbe765e6cbb1a8c7d372ce6aa6ddc7c6b8e2
 	c1->Clear();
 		
 	c1->Close();
