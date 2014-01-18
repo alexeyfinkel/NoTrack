@@ -201,6 +201,11 @@ int crystalCalibTemp()
                 {	
                     hix = ze2->ixs->at(k);
                     hiy = ze2->iys->at(k);
+                    if( (((ix-50.5)*(ix-50.5)+(iy-50.5)*(iy-50.5))  < 132.25) || (((ix-50.5)*(ix-50.5)+(iy-50.5)*(iy-50.5)) > 342.25) )
+                    {
+                        correction+=ze2->hitEnergyFractions->at(k);
+                        continue;
+                    }
                     if(ze2->reco.eta[1]>0) correction+=(constMapP[std::make_pair(hix,hiy)]->GetBinContent(iter-1))*(ze2->hitEnergyFractions->at(k));//positive endcap 
                     else correction+=(constMapN[std::make_pair(hix,hiy)]->GetBinContent(iter-1))*(ze2->hitEnergyFractions->at(k));//negative endcap
                 }
@@ -289,7 +294,12 @@ int crystalCalibTemp()
 		{
 			for(int j=30;j<71;j++)
 			{
-				if( (((i-50.5)*(i-50.5)+(j-50.5)*(j-50.5))  < 132.25)  || (((i-50.5)*(i-50.5)+(j-50.5)*(j-50.5)) > 342.25) ) continue;
+				if( (((i-50.5)*(i-50.5)+(j-50.5)*(j-50.5))  < 132.25)  || (((i-50.5)*(i-50.5)+(j-50.5)*(j-50.5)) > 342.25) )
+                {
+                    constMapN[std::make_pair(i,j)]->SetBinContent(iter,1);
+                    constMapP[std::make_pair(i,j)]->SetBinContent(iter,1);
+                    continue;
+                }
 				
 				//do ratio fits and hists
                 //negative side

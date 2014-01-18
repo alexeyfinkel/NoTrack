@@ -1,4 +1,4 @@
-//this script is supposed to run iterative process in PU bind and project back to 0 PU.
+//this is a copy of the MC projected cal consts script, only ran on data.
 
 #include <stdio.h>
 #include <iostream>
@@ -62,7 +62,7 @@ int calibrateMC()
 	const int nIterations = 15;
     
     //let's be fancy and use a map!
-	std::map< triplet, TH1D* > ratioMapP, ratioMapN, constMapN, constMapP, zMassMapN, zMassMapP;
+	std::map< triplet, TH1D* > ratioMapP, ratioMapN, constMapN, constMapP;
     std::map< std::pair<int,int>, TH1D* > constByPuN, constByPuP;
     char title[256],name[128], filename[128];
     
@@ -92,12 +92,6 @@ int calibrateMC()
                 sprintf(name,"CalConstIx%diy%dzP_pu%d",i,j,k);
                 sprintf(title,"Calib. Const, NT+ i_{x} = %d, i_{y} = %d, PU %d-%d;Iteration;CalConst",i,j,5*(k+1),5*(k+2));	
                 constMapP[triplet(i,j,k)]= new TH1D(name,title,nIterations,0,nIterations);	
-                sprintf(name,"zMassIx%diy%dzN_pu%d",i,j,k);
-                sprintf(title,"M_{ee}, NT- i_{x} = %d, i_{y} = %d, PU %d-%d;M_{ee} (GeV);Events/2GeV",i,j,5*(k+1),5*(k+2));	
-                zMassMapN[triplet(i,j,k)]= new TH1D(name,title,30,60,120);
-                sprintf(name,"zMassIx%diy%dzP_pu%d",i,j,k);
-                sprintf(title,"M_{ee}, NT+ i_{x} = %d, i_{y} = %d, PU %d-%d;M_{ee} (GeV);Events/2GeV",i,j,5*(k+1),5*(k+2));	
-                zMassMapP[triplet(i,j,k)]= new TH1D(name,title,30,60,120);
 
                 //initialize consts	to zero, just in case (not actually used):
                 constMapN[triplet(i,j,k)]->SetBinContent(0,1);
@@ -117,8 +111,8 @@ int calibrateMC()
         ZafterByPU.push_back(new TH1D(name,title,30,60,120));
     }
     TH1D *ZmassVsPU = new TH1D("zMassVsPU","Z Mass vs PU,;nVert;M_{peak}",4,5,25);
-    TH1D *Slopes1D = new TH1D("Slopes1D","PU-dependence slopes,;slope;crystals",20,-0.02,0.02);
-    TH1D *Ratios1D = new TH1D("Ratios1D","Projected/Cumulative Distribution;C_{0}/C_{tot};crystals",20,0.6,1.5);
+    TH1D *Slopes1D = new TH1D("Slopes1D","PU-dependence slopes,;slope;crystals",30,-0.015,0.015);
+    TH1D *Ratios1D = new TH1D("Ratios1D","Projected/Cumulative Distribution;C_{0}/C_{tot};crystals",30,0.7,1.3);
     TH1D *slopesVsEtaN = new TH1D("slopesVsEtaN","Ring-avg. slope vs. #eta, NT-;#eta-ring;slope",7,0,7);
     TH1D *slopesVsEtaP = new TH1D("slopesVsEtaP","Ring-avg. slope vs. #eta, NT+;#eta-ring;slope",7,0,7);
     TH1D *ratiosVsEtaN = new TH1D("ratiosVsEtaN","Ring-avg. ratios vs. #eta, NT-;#eta-ring;ratio",7,0,7);
@@ -142,17 +136,7 @@ int calibrateMC()
         ratiosByRingP.push_back(new TH1D(name,title,10,0.85,1.2));
     }
     
-    
-    //2-D hists for final Mean Ratios, Z masses before and after:
-	//TH2D *meansMapBeforeN = new TH2D("meansMapBeforeN","Mean Before, NT-;i_{x};i_{y}",40,30,70,40,30,70);
-	//TH2D *meansMapBeforeP = new TH2D("meansMapBeforeP","Mean Before, NT+;i_{x};i_{y}",40,30,70,40,30,70);
-	//TH2D *meansMapAfterN = new TH2D("meansMapAfterN","Mean After, NT-;i_{x};i_{y}",40,30,70,40,30,70);
-	//TH2D *meansMapAfterP = new TH2D("meansMapAfterP","Mean After, NT+;i_{x};i_{y}",40,30,70,40,30,70);
-	TH2D *zMassBeforeN = new TH2D("zMassBeforeN","Z Mass Before Calibration, NT-;i_{x};i_{y}",40,30,70,40,30,70);
-	TH2D *zMassBeforeP = new TH2D("zMassBeforeP","Z Mass Before Calibration, NT+;i_{x};i_{y}",40,30,70,40,30,70);
-	TH2D *zMassAfterN = new TH2D("zMassAfterN","Z Mass After Calibration, NT-;i_{x};i_{y}",40,30,70,40,30,70);
-	TH2D *zMassAfterP = new TH2D("zMassAfterP","Z Mass After Calibration, NT+;i_{x};i_{y}",40,30,70,40,30,70);
-	TH2D *finalCalConstsN = new TH2D("finalCalConstsN","Final Calibration Constants, NT-;i_{x};i_{y}",40,30,70,40,30,70);
+    TH2D *finalCalConstsN = new TH2D("finalCalConstsN","Final Calibration Constants, NT-;i_{x};i_{y}",40,30,70,40,30,70);
 	TH2D *finalCalConstsP = new TH2D("finalCalConstsp","Final Calibration Constants, NT+;i_{x};i_{y}",40,30,70,40,30,70);
     TH2D *projectedCalConstsN = new TH2D("projectedCalConstsN","Projected Calibration Constants, NT-;i_{x};i_{y}",40,30,70,40,30,70);
 	TH2D *projectedCalConstsP = new TH2D("projectedCalConstsp","Projected Calibration Constants, NT+;i_{x};i_{y}",40,30,70,40,30,70);
@@ -180,7 +164,7 @@ int calibrateMC()
     cumulCalFile.open("Calibration/MC/newMC/PU/CumulativeCalConsts_MC.txt");
 	if(!cumulCalFile.is_open())
 	{
-		std::cout<<"Failed to create cal. constants file. Existing"<<std::endl;
+		std::cout<<"Failed to open constants file. Existing"<<std::endl;
 		return 1;
 	}
     do
@@ -213,7 +197,7 @@ int calibrateMC()
     
     //gaussian fits
     TF1 *ratioFit = new TF1("fit","gaus",0.4,1.6);
-	TF1 *massFit = new TF1("fit","gaus",70,110);
+	//TF1 *massFit = new TF1("fit","gaus",70,110);
     
     //tracking averages:
     std::vector<int> evtsInBin(4,0), nVertInBin(4,0);
@@ -300,15 +284,10 @@ int calibrateMC()
 				//NOTE: this is the energy of the entire CLUSTER, not just SEED!
 				//Though most of it still comes from the seed crystal... so good enough for now.				
 				
-				//std::cout<<"ExpectedPt = "<<expectedPt<<"; ObservedPt = "<<observedPt<<std::endl;
 				if(ze2->reco.eta[1]>0)//positive endcap
 				{				
-					//histMapP[std::make_pair(ix,iy)]->Fill(ze2->reco.mz);
 					if( (ze2->reco.mz>80) && (ze2->reco.mz<110) )
 					{
-						//zMassP[iter-1]->Fill(theZ.M());
-						//zMassMapP[std::make_pair(ix,iy)]->Fill(theZ.M());
-						//std::cout<<"\n\nNEXT HIT ("<<ze2->ixs->size()<<" xtl hits):"<<std::endl;
 						for(unsigned int k=0; k<(ze2->ixs->size()); k++ )
 						{
                             hix = ze2->ixs->at(k);
@@ -318,7 +297,6 @@ int calibrateMC()
 								std::cout<<"Out of bounds: ("<<hix<<","<<hiy<<") Z+; frac = "<<ze2->hitEnergyFractions->at(k)<<std::endl;
 								continue;
 							}
-							//std::cout<<"Xtal ("<<(ze2->ixs->at(k))<<","<<(ze2->iys->at(k))<<") Z+, fraction = "<<(ze2->hitEnergyFractions->at(k))<<std::endl;
 							ratioMapP[triplet(hix,hiy,puBin)]->Fill(expectedPt/observedPt,ze2->hitEnergyFractions->at(k));  //NOTE: Using Expected/Observed!
 						}
 					}
@@ -328,9 +306,6 @@ int calibrateMC()
 					//histMapN[std::make_pair(ix,iy)]->Fill(ze2->reco.mz);
 					if( (ze2->reco.mz>80) && (ze2->reco.mz<110) )
 					{
-						//zMassN[iter-1]->Fill(theZ.M());
-						//zMassMapN[triplet(ix,iy,puBin)]->Fill(theZ.M());
-						//std::cout<<"\n\nNEXT HIT ("<<ze2->ixs->size()<<" xtl hits):"<<std::endl;
 						for(unsigned int k=0; k<(ze2->ixs->size()); k++ )
 						{
 							hix = ze2->ixs->at(k);
@@ -340,8 +315,6 @@ int calibrateMC()
 								std::cout<<"Out of bounds: ("<<hix<<","<<hiy<<") Z-; frac = "<<ze2->hitEnergyFractions->at(k)<<std::endl;
 								continue;
 							}
-							//if(ze2->hitEnergyFractions->at(k)<0) continue;
-							//std::cout<<"Xtal ("<<(ze2->ixs->at(k))<<","<<(ze2->iys->at(k))<<") Z-, fraction = "<<(ze2->hitEnergyFractions->at(k))<<std::endl;
 							ratioMapN[triplet(hix,hiy,puBin)]->Fill(expectedPt/observedPt,ze2->hitEnergyFractions->at(k));  //NOTE: Using Expected/Observed!
 						}
 					}
@@ -373,55 +346,53 @@ int calibrateMC()
                 {
                     //do ratio fits and hists
                     //negative side
-                    if(ratioMapN[triplet(i,j,k)]->GetEntries() > 20)
+                    if(ratioMapN[triplet(i,j,k)]->GetEntries() > 10)
                     {
-                        ratioMapN[triplet(i,j,k)]->Fit(ratioFit,"QLMN","",0.4,1.6);					
+                        ratioFit->SetParameter(1,1);
+                        ratioFit->SetParameter(2,0.2);
+                        ratioFit->SetParLimits(1,0.5,1.5);
+                        ratioFit->SetParLimits(2,0.1,0.6);
+                        ratioMapN[triplet(i,j,k)]->Fit(ratioFit,"QLLMN","",0.4,1.6);					
                         constMapN[triplet(i,j,k)]->SetBinContent(iter,(constMapN[triplet(i,j,k)]->GetBinContent(iter-1) )*(ratioFit->GetParameter(1) ) );
                         constMapN[triplet(i,j,k)]->SetBinError(iter, ratioFit->GetParError(1));
-                        //calConstsN[iter-1]->Fill( constMapN[triplet(i,j,k)]->GetBinContent(iter) );
-                        //calConstsAll[iter-1]->Fill( constMapN[triplet(i,j,k)]->GetBinContent(iter) );
-                        //meansN[iter-1]->Fill( ratioFit->GetParameter(1) );
-                        //meansAll[iter-1]->Fill( ratioFit->GetParameter(1) );
-                        if(iter==1) 
-                        {
-                            zMassMapN[triplet(i,j,k)]->Fit(massFit,"QLMN","",80,110);
-                            zMassBeforeN->SetBinContent(i-30,j-30,massFit->GetParameter(1));
-                        }                       
+                    }
+                    else
+                    {
+                        constMapN[triplet(i,j,k)]->SetBinContent(iter,1 );
+                        constMapN[triplet(i,j,k)]->SetBinError(iter, 999);
                     }
                     //now positive side
-                    if(ratioMapP[triplet(i,j,k)]->GetEntries() > 20)
+                    if(ratioMapP[triplet(i,j,k)]->GetEntries() > 10)
                     {
-                        ratioMapP[triplet(i,j,k)]->Fit(ratioFit,"QLMN","",0.4,1.6);					
+                        ratioFit->SetParameter(1,1);
+                        ratioFit->SetParameter(2,0.2);
+                        ratioFit->SetParLimits(1,0.5,1.5);
+                        ratioFit->SetParLimits(2,0.1,0.6);
+                        ratioMapP[triplet(i,j,k)]->Fit(ratioFit,"QLLMN","",0.4,1.6);					
                         constMapP[triplet(i,j,k)]->SetBinContent(iter, (constMapP[triplet(i,j,k)]->GetBinContent(iter-1) )*(ratioFit->GetParameter(1) ));
-                        constMapP[triplet(i,j,k)]->SetBinError(iter, ratioFit->GetParError(1));
-                        //calConstsP[iter-1]->Fill( constMapP[triplet(i,j,k)]->GetBinContent(iter) );
-                        //calConstsAll[iter-1]->Fill( constMapP[triplet(i,j,k)]->GetBinContent(iter) );	
-                        //meansP[iter-1]->Fill( ratioFit->GetParameter(1) );
-                        //meansAll[iter-1]->Fill( ratioFit->GetParameter(1) );			
-                        if(iter==1) 
-                        {
-                            //meansMapBeforeP->SetBinContent(i-30,j-30,ratioFit->GetParameter(1));
-                            zMassMapP[triplet(i,j,k)]->Fit(massFit,"QLMN","",80,110);
-                            zMassBeforeP->SetBinContent(i-30,j-30,massFit->GetParameter(1));
-                        }
-                        
+                        constMapP[triplet(i,j,k)]->SetBinError(iter, ratioFit->GetParError(1));                        
+                    }
+                    else
+                    {
+                        constMapP[triplet(i,j,k)]->SetBinContent(iter,1 );
+                        constMapP[triplet(i,j,k)]->SetBinError(iter, 999);
                     }
                     if(iter != nIterations)
                     {
                         ratioMapN[triplet(i,j,k)]->Reset();
                         ratioMapP[triplet(i,j,k)]->Reset();
-                        zMassMapN[triplet(i,j,k)]->Reset();
-                        zMassMapP[triplet(i,j,k)]->Reset();
                     }
-                    else
-                    {
-                        zMassMapP[triplet(i,j,k)]->Fit(massFit,"QLMN","",75,105);
-                        zMassAfterP->SetBinContent(i-30,j-30,massFit->GetParameter(1));
-                        zMassMapN[triplet(i,j,k)]->Fit(massFit,"QLMN","",75,105);
-                        zMassAfterN->SetBinContent(i-30,j-30,massFit->GetParameter(1));
-                        calFile<<i<<"\t"<<j<<"\t1\t"<<(float)(constMapP[triplet(i,j,k)]->GetBinContent(iter))<<"\t"<<(float)ratioFit->GetParError(1)<<"\n";
-                        calFile<<i<<"\t"<<j<<"\t-1\t"<<(float)(constMapN[triplet(i,j,k)]->GetBinContent(iter))<<"\t"<<(float)ratioFit->GetParError(1)<<"\n";
-                    }
+                    //else
+                    //{
+                    //    if(constMapP[triplet(i,j,k)]->GetBinContent(iter)!=1)
+                    //        calFile<<i<<"\t"<<j<<"\t1\t"<<(float)(constMapP[triplet(i,j,k)]->GetBinContent(iter))<<"\t"<<(float)ratioFit->GetParError(1)<<"\n";
+                    //    else
+                    //        calFile<<i<<"\t"<<j<<"\t1\t"<<-1<<"\t"<<999<<"\n";
+                    //    if(constMapN[triplet(i,j,k)]->GetBinContent(iter)!=1)
+                    //        calFile<<i<<"\t"<<j<<"\t-1\t"<<(float)(constMapN[triplet(i,j,k)]->GetBinContent(iter))<<"\t"<<(float)ratioFit->GetParError(1)<<"\n";
+                    //    else
+                    //        calFile<<i<<"\t"<<j<<"\t-1\t"<<-1<<"\t"<<999<<"\n";
+                    //}
                 }
 			}
 		}
@@ -456,42 +427,69 @@ int calibrateMC()
                 constByPuN[std::make_pair(i,j)]->SetBinContent(k+1,constMapN[triplet(i,j,k)]->GetBinContent(nIterations));
                 constByPuN[std::make_pair(i,j)]->SetBinError(k+1,constMapN[triplet(i,j,k)]->GetBinError(nIterations));
             }
-            if(constByPuP[std::make_pair(i,j)]->GetEntries()==4)
+            if(constByPuP[std::make_pair(i,j)]->GetEntries()==4)//obsolete test that did not seem to work anyway...
             {
                 puFit->SetParameter(0,1);
                 puFit->SetParameter(1,0);
+                puFit->SetParLimits(0,0.5,1.5);
+                puFit->SetParLimits(1,-0.1,0.1);
                 //puFit->SetParameter(2,0);
-                //constByPuP[std::make_pair(i,j)]->Draw("E");
-                //constByPuP[std::make_pair(i,j)]->GetYaxis()->SetRangeUser(0.6,1.4);
-                constByPuP[std::make_pair(i,j)]->Fit(puFit,"QLMN","",5,25);
+                constByPuP[std::make_pair(i,j)]->Draw("E");
+                constByPuP[std::make_pair(i,j)]->GetYaxis()->SetRangeUser(0.6,1.4);
+                constByPuP[std::make_pair(i,j)]->Fit(puFit,"QLM","",5,25);
                 //sprintf(title,"Calibration/MC/newMC/PU/CrystalFits/ix%d_iy%d_P.png",i,j);
                 //c1->Print(title);
-                projectedCalConstsP->SetBinContent(i-30,j-30, puFit->GetParameter(0) );
-                Slopes2DP->SetBinContent(i-30,j-30, puFit->GetParameter(1) );
-                projectionRatiosP->SetBinContent(i-30,j-30, puFit->GetParameter(0)/finalCalConstsP->GetBinContent(i-30,j-30) );
-                Slopes1D->Fill(puFit->GetParameter(1));
-                Ratios1D->Fill(projectionRatiosP->GetBinContent(i-30,j-30));
-                slopesByRingP[ring]->Fill(puFit->GetParameter(1));
-                ratiosByRingP[ring]->Fill(puFit->GetParameter(0)/finalCalConstsP->GetBinContent(i-30,j-30));
+                if(puFit->GetParameter(1)!=1.0)
+                {
+                    projectedCalConstsP->SetBinContent(i-30,j-30, puFit->GetParameter(0) );
+                    Slopes2DP->SetBinContent(i-30,j-30, puFit->GetParameter(1) );
+                    projectionRatiosP->SetBinContent(i-30,j-30, puFit->GetParameter(0)/finalCalConstsP->GetBinContent(i-30,j-30) );
+                    Slopes1D->Fill(puFit->GetParameter(1));
+                    Ratios1D->Fill(projectionRatiosP->GetBinContent(i-30,j-30));
+                    slopesByRingP[ring]->Fill(puFit->GetParameter(1));
+                    ratiosByRingP[ring]->Fill(puFit->GetParameter(0)/finalCalConstsP->GetBinContent(i-30,j-30));
+                    calFile<<i<<"\t"<<j<<"\t1\t"<<(float)(puFit->GetParameter(0))<<"\t"<<(float)puFit->GetParameter(1)<<"\n";
+                }                    
+                else
+                {
+                    projectedCalConstsP->SetBinContent(i-30,j-30, -1 );
+                    Slopes2DP->SetBinContent(i-30,j-30, -1 );
+                    projectionRatiosP->SetBinContent(i-30,j-30, -1 );
+                    calFile<<i<<"\t"<<j<<"\t1\t"<<-1<<"\t"<<999<<"\n";
+                }
             }
+                
             else std::cout<<"Bad Fit: ix = "<<i<<", iy = "<<j<<", iz = 1"<<std::endl;
             if(constByPuN[std::make_pair(i,j)]->GetEntries()==4)
             {
                 puFit->SetParameter(0,1);
                 puFit->SetParameter(1,0);
+                puFit->SetParLimits(0,0.5,1.5);
+                puFit->SetParLimits(1,-0.1,0.1);
                 //puFit->SetParameter(2,0);
-                //constByPuN[std::make_pair(i,j)]->Draw("E");
-                //constByPuN[std::make_pair(i,j)]->GetYaxis()->SetRangeUser(0.6,1.4);
-                constByPuN[std::make_pair(i,j)]->Fit(puFit,"QLMN","",5,25);
+                constByPuN[std::make_pair(i,j)]->Draw("E");
+                constByPuN[std::make_pair(i,j)]->GetYaxis()->SetRangeUser(0.6,1.4);
+                constByPuN[std::make_pair(i,j)]->Fit(puFit,"QLM","",5,25);
                 //sprintf(title,"Calibration/MC/newMC/PU/CrystalFits/ix%d_iy%d_N.png",i,j);
                 //c1->Print(title);
-                projectedCalConstsN->SetBinContent(i-30,j-30, puFit->GetParameter(0) );
-                Slopes2DN->SetBinContent(i-30,j-30, puFit->GetParameter(1) );
-                projectionRatiosN->SetBinContent(i-30,j-30, puFit->GetParameter(0)/finalCalConstsN->GetBinContent(i-30,j-30) );
-                Slopes1D->Fill(puFit->GetParameter(1));
-                Ratios1D->Fill(projectionRatiosN->GetBinContent(i-30,j-30));
-                slopesByRingN[ring]->Fill(puFit->GetParameter(1));
-                ratiosByRingN[ring]->Fill(puFit->GetParameter(0)/finalCalConstsN->GetBinContent(i-30,j-30));
+                if(puFit->GetParameter(1)!=1.0)
+                {
+                    projectedCalConstsN->SetBinContent(i-30,j-30, puFit->GetParameter(0) );
+                    Slopes2DN->SetBinContent(i-30,j-30, puFit->GetParameter(1) );
+                    projectionRatiosN->SetBinContent(i-30,j-30, puFit->GetParameter(0)/finalCalConstsP->GetBinContent(i-30,j-30) );
+                    Slopes1D->Fill(puFit->GetParameter(1));
+                    Ratios1D->Fill(projectionRatiosN->GetBinContent(i-30,j-30));
+                    slopesByRingN[ring]->Fill(puFit->GetParameter(1));
+                    ratiosByRingN[ring]->Fill(puFit->GetParameter(0)/finalCalConstsN->GetBinContent(i-30,j-30));
+                    calFile<<i<<"\t"<<j<<"\t-1\t"<<(float)(puFit->GetParameter(0))<<"\t"<<(float)puFit->GetParameter(1)<<"\n";
+                }                    
+                else
+                {
+                    projectedCalConstsN->SetBinContent(i-30,j-30, -1 );
+                    Slopes2DN->SetBinContent(i-30,j-30, -1 );
+                    projectionRatiosN->SetBinContent(i-30,j-30, -1 );
+                    calFile<<i<<"\t"<<j<<"\t-1\t"<<-1<<"\t"<<999<<"\n";
+                }
             }
             else std::cout<<"Bad Fit: ix = "<<i<<", iy = "<<j<<", iz = -1"<<std::endl;
         }
@@ -506,44 +504,46 @@ int calibrateMC()
         ratiosVsEtaP->SetBinContent(r,ratiosByRingP[r-1]->GetMean());
     }
     
+    c1->SetRightMargin(0.1);
+    
     finalCalConstsN->GetZaxis()->SetRangeUser(0.75,1.25);
-	finalCalConstsN->GetZaxis()->SetLabelSize(0.03);
+	finalCalConstsN->GetZaxis()->SetLabelSize(0.035);
 	finalCalConstsN->Draw("colz");
 	c1->Print("Calibration/MC/newMC/PU/finalCumulativeConstsN.png");
 	c1->Clear();
     finalCalConstsP->GetZaxis()->SetRangeUser(0.75,1.25);
-	finalCalConstsP->GetZaxis()->SetLabelSize(0.03);
+	finalCalConstsP->GetZaxis()->SetLabelSize(0.035);
 	finalCalConstsP->Draw("colz");
 	c1->Print("Calibration/MC/newMC/PU/finalCumulativeConstsP.png");
 	c1->Clear();
     //projected calibration constants
 	projectedCalConstsN->GetZaxis()->SetRangeUser(0.75,1.25);
-	projectedCalConstsN->GetZaxis()->SetLabelSize(0.03);
+	projectedCalConstsN->GetZaxis()->SetLabelSize(0.035);
 	projectedCalConstsN->Draw("colz");
 	c1->Print("Calibration/MC/newMC/PU/ProjectedConstsN.png");
 	c1->Clear();
 	projectedCalConstsP->GetZaxis()->SetRangeUser(0.75,1.25);
-	projectedCalConstsP->GetZaxis()->SetLabelSize(0.03);
+	projectedCalConstsP->GetZaxis()->SetLabelSize(0.035);
 	projectedCalConstsP->Draw("colz");
 	c1->Print("Calibration/MC/newMC/PU/ProjectedCalConstsP.png");
 	c1->Clear();
-    Slopes2DN->GetZaxis()->SetRangeUser(-0.02,0.01);
-	Slopes2DN->GetZaxis()->SetLabelSize(0.03);
+    Slopes2DN->GetZaxis()->SetRangeUser(-0.01,0.005);
+	Slopes2DN->GetZaxis()->SetLabelSize(0.02);
 	Slopes2DN->Draw("colz");
 	c1->Print("Calibration/MC/newMC/PU/Slopes2DN.png");
 	c1->Clear();
-    Slopes2DP->GetZaxis()->SetRangeUser(-0.02,0.01);
-	Slopes2DP->GetZaxis()->SetLabelSize(0.03);
+    Slopes2DP->GetZaxis()->SetRangeUser(-0.01,0.005);
+	Slopes2DP->GetZaxis()->SetLabelSize(0.02);
 	Slopes2DP->Draw("colz");
 	c1->Print("Calibration/MC/newMC/PU/Slopes2DP.png");
 	c1->Clear();
-    projectionRatiosP->GetZaxis()->SetRangeUser(0.85,1.2);
-	projectionRatiosP->GetZaxis()->SetLabelSize(0.03);
+    projectionRatiosP->GetZaxis()->SetRangeUser(0.8,1.2);
+	projectionRatiosP->GetZaxis()->SetLabelSize(0.035);
 	projectionRatiosP->Draw("colz");
 	c1->Print("Calibration/MC/newMC/PU/ProjectionRatiosP.png");
 	c1->Clear();
-    projectionRatiosN->GetZaxis()->SetRangeUser(0.85,1.2);
-	projectionRatiosN->GetZaxis()->SetLabelSize(0.03);
+    projectionRatiosN->GetZaxis()->SetRangeUser(0.8,1.2);
+	projectionRatiosN->GetZaxis()->SetLabelSize(0.035);
 	projectionRatiosN->Draw("colz");
 	c1->Print("Calibration/MC/newMC/PU/ProjectionRatiosN.png");
 	c1->Clear();
@@ -556,10 +556,11 @@ int calibrateMC()
     TF1 *bkgd = new TF1("bkgd","[0]+[1]*(x-80)",80,105 );
     
     //c1->SetMargin(0.08,0.03,0.09,0.05);
-    TLegend* l1 = new TLegend(0.7,0.7,0.9,0.9);
+    TLegend* l1 = new TLegend(0.65,0.8,0.95,0.93);
 	l1->SetFillColor(10);
     
-    
+    c1->SetRightMargin(0.05); 
+    c1->SetTopMargin(0.07);
     
     for(int k=0;k<4;k++)
     {
@@ -581,7 +582,7 @@ int calibrateMC()
         voigtFit1->SetParameter(5,-10);
         voigtFit1->SetLineWidth(4);
         voigtFit1->SetLineColor(kBlue);
-        ZbeforeByPU[k]->Fit(voigtFit1,"LM","",80,105);
+        ZbeforeByPU[k]->Fit(voigtFit1,"QLM","",80,105);
         sprintf(title,"#mu = %.3g, #sigma = %.3g",(float)voigtFit1->GetParameter(1),(float)voigtFit1->GetParameter(2) );
         l1->AddEntry(voigtFit1,title,"");
         sprintf(filename,"Calibration/MC/newMC/PU/ZmassBefore_pu%d.png",k);
@@ -605,11 +606,18 @@ int calibrateMC()
         //std::cout<<"bin "<<k<<" avPU "<<binAveragePU[k]<<" Z-mass "<<zPeaks[k]<<std::endl;
     }
     
+    TLegend* l2 = new TLegend(0.15,0.8,0.40,0.93);
+	l2->SetFillColor(10);
+    
     //for make stupid TGraph work
     TH2D* dummy = new TH2D("dummy","Z-peak location Vs. Average PU;nVert-1;M_{Z}",1,0,25,1,90,95);    
     dummy->Draw();
     //dummy->GetXaxis()->SetRangeUser(0,25);
     //dummy->GetYaxis()->SetRangeUser(90,95);
+    puFit->SetParameter(0,90);
+    puFit->SetParameter(1,0);
+    puFit->SetParLimits(0,80,100);
+    puFit->SetParLimits(1,0,10);
     puFit->SetLineColor(kBlue);
     TGraph* zPeakByPu = new TGraph(4,&binAveragePU[0],&zPeaks[0]);
     zPeakByPu->SetMarkerStyle(20);
@@ -618,8 +626,13 @@ int calibrateMC()
     zPeakByPu->Fit(puFit,"QM","",0,25);
     zPeakByPu->GetXaxis()->SetRangeUser(0,25);
     zPeakByPu->GetYaxis()->SetRangeUser(90,95);
+    zPeakByPu->GetYaxis()->SetTitleOffset(1.1);
     zPeakByPu->Draw("SAME P");
-    c1->Print("Calibration/MC/newMC/PU/ZmassVsAveragePU.png");    
+    sprintf(title,"Intercept = %.3f",(float)puFit->GetParameter(0) );
+    l2->AddEntry(zPeakByPu,title,"");
+    l2->Draw();
+    c1->Print("Calibration/MC/newMC/PU/ZmassVsAveragePU.png");
+    c1->Clear();    
     
     Slopes1D->SetMarkerStyle(20);
     Slopes1D->Draw("P");
@@ -644,26 +657,17 @@ int calibrateMC()
     ratiosVsEtaN->SetMarkerStyle(20);
     ratiosVsEtaN->SetMarkerStyle(20);
     ratiosVsEtaN->SetMarkerSize(2);
-    ratiosVsEtaN->SetMarkerColor(kGreen+2);
-    ratiosVsEtaN->GetYaxis()->SetRangeUser(1,1.2);
+    ratiosVsEtaN->SetMarkerColor(kGreen+3);
+    ratiosVsEtaN->GetYaxis()->SetRangeUser(1,1.1);
     ratiosVsEtaN->Draw("P");
     c1->Print("Calibration/MC/newMC/PU/ratiosVsEtaN.png");
     ratiosVsEtaP->SetMarkerStyle(20);
     ratiosVsEtaP->SetMarkerSize(2);
-    ratiosVsEtaP->SetMarkerColor(kGreen+2);
-    ratiosVsEtaP->GetYaxis()->SetRangeUser(1,1.2);
+    ratiosVsEtaP->SetMarkerColor(kGreen+3);
+    ratiosVsEtaP->GetYaxis()->SetRangeUser(1,1.1);
     ratiosVsEtaP->Draw("P");
     c1->Print("Calibration/MC/newMC/PU/ratiosVsEtaP.png");
     c1->Clear();
-    
-    /*ZmassVsPU->SetMarkerStyle(20);
-    ZmassVsPU->GetYaxis()->SetRangeUser(87,97);
-    ZmassVsPU->Draw("E");
-    puFit->SetParameter(0,92);
-    puFit->SetParameter(1,0);
-    //puFit->SetParameter(2,0);
-    ZmassVsPU->Fit(puFit,"QLM","",5,25);
-    c1->Print("Calibration/MC/newMC/PU/ZmassVaPU.png");*/
    
     c1->Close();
     return 0;
